@@ -48,7 +48,7 @@ func getOrderList() [numFloors][numButtons]Order {
 	return myElevator.Orders
 }
 
-func setOrder(myElevator Elevator, floor int, buttonType elevio.ButtonType, status OrderStatus, finished bool) {
+func setOrder(myElevator *Elevator, floor int, buttonType elevio.ButtonType, status OrderStatus, finished bool) {
 	myElevator.Orders[floor][buttonType].Status = status
 	myElevator.Orders[floor][buttonType].Finished = finished
 
