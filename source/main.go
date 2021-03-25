@@ -7,6 +7,7 @@ import (
 	"./UtilitiesTypes"
 	"./elevio"
 	"./fsm"
+	"./sync"
 )
 
 var myElevator UtilitiesTypes.Elevator
@@ -38,7 +39,10 @@ func main() {
 	elevio.Init("localhost:15657", numFloors)
 	myElevator.State = fsm.IDLE
 	Requests.ClearAllLights(numFloors, numButtons)
-	go DoorState()
+
+	sync.Test()
+
+	/*go DoorState()
 	for {
 		select {
 		case a := <-drv_buttons:
@@ -49,6 +53,11 @@ func main() {
 			fsm.OnFloorArrival(&myElevator, a)
 		}
 	}
+
+
+
+
+
 	//FsmFunction(drv_buttons, drv_floors, drv_obstr, drv_stop)
 	//var noOrder UtilitiesTypes.Order
 	//noOrder = UtilitiesTypes.Order{Floor: -1, ButtonType: -1, Status: -1, Finished: false}

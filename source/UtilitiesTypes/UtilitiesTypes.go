@@ -28,12 +28,13 @@ type OrderStatus int
 
 const (
 	OrderTimeout OrderStatus = -2
-	Inactive                 = -1
-	Pending                  = 0
+	Inactive                 = 0
+	Pending                  = 2
 	Active                   = 1
 )
 
 type Elevator struct {
+	ID     int
 	Dir    elevio.MotorDirection
 	Floor  int
 	State  State
@@ -48,7 +49,7 @@ func getOrderList() [numFloors][numButtons]Order {
 	return myElevator.Orders
 }
 
-func setOrder(myElevator *Elevator, floor int, buttonType elevio.ButtonType, status OrderStatus, finished bool) {
+func SetOrder(myElevator *Elevator, floor int, buttonType elevio.ButtonType, status OrderStatus, finished bool) {
 	myElevator.Orders[floor][buttonType].Status = status
 	myElevator.Orders[floor][buttonType].Finished = finished
 
