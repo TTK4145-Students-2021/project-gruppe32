@@ -3,6 +3,7 @@ package main
 import (
 	//"fmt"
 
+	"./Network"
 	"./Requests"
 	"./UtilitiesTypes"
 	"./elevio"
@@ -31,10 +32,13 @@ func main() {
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
 
+	syncChns := 
+
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
+	Network.Networkmain()
 
 	elevio.Init("localhost:15657", numFloors)
 	myElevator.State = fsm.IDLE

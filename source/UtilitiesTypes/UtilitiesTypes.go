@@ -41,6 +41,21 @@ type Elevator struct {
 	Orders [numFloors][numButtons]Order
 }
 
+type Msg struct {
+	Elevator        Elevator
+	IsNewOrder      bool
+	Order           Order
+	NewOrderTakerID int
+	IsReceived      bool
+	MsgID           int
+	LocalID         int
+}
+
+type MsgChan struct {
+	SendChan chan Msg
+	RecChan  chan Msg
+}
+
 func getOrder(floor int, buttonType int) Order {
 	return myElevator.Orders[floor][buttonType]
 }

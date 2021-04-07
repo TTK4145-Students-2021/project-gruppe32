@@ -1,24 +1,34 @@
-package main
+package Network
 
 import (
-	"./network/bcast"
-	"./network/localip"
-	"./network/peers"
 	"flag"
 	"fmt"
 	"os"
 	"time"
+
+	"../UtilitiesTypes"
+
+	"./network/bcast"
+	"./network/localip"
+	"./network/peers"
 )
 
 // We define some custom struct to send over the network.
 // Note that all members we want to transmit must be public. Any private members
 //  will be received as zero-values.
-type HelloMsg struct {
-	Message string
-	Iter    int
+type ElevatorMsg struct {
+	Elevator UtilitiesTypes.Elevator
+	Message  string
+	MsgID    int
 }
 
-func main() {
+type OrderMsg struct {
+	Order UtilitiesTypes.Order
+	Id    int
+	MsgID int
+}
+
+func Networkmain() {
 	// Our id can be anything. Here we pass it on the command line, using
 	//  `go run main.go -id=our_id`
 	var id string
