@@ -3,7 +3,7 @@ package main
 import (
 	//"fmt"
 
-	"./Network"
+	"./Network/network/bcast"
 	"./Requests"
 	"./UtilitiesTypes"
 	"./elevio"
@@ -23,7 +23,10 @@ func DoorState() {
 	}
 }
 
+
 func main() {
+	sync.LastIncomingMessage.MsgID = 0
+	sync.LastIncomingMessage.LocalID = 0
 
 	numFloors := 4
 	numButtons := 3
@@ -31,25 +34,33 @@ func main() {
 	drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
+	msgChan := UtilitiesTypes.MsgChan {
+		SendChan: make(chan UtilitiesTypes.Msg),
+		RecChan: make(chan UtilitiesTypes.Msg),
+	}
 
-	syncChns := 
-
+	
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
-	Network.Networkmain()
 
 	elevio.Init("localhost:15657", numFloors)
 	myElevator.State = fsm.IDLE
 	Requests.ClearAllLights(numFloors, numButtons)
 
-	sync.Test()
+	//sync.Test()
+	//go sync.Sync(msgChan, myElevator)
+	go bcast.Transmitter(16569, msgChan.SendChan)
+	go bcast.Receiver(16569, msgChan.RecChan)
 
-	/*go DoorState()
+	go DoorState()
 	for {
 		select {
 		case a := <-drv_buttons:
+			Order1 := UtilitiesTypes.Order{Floor: 1, ButtonType: 1}
+			sync.AddToMsgBuf(myElevator,Order1, 1,true)
+			//sync.SendMessage(msgChan)
 			fsm.OnRequestButtonPress(&myElevator, a.Floor, a.Button)
 			//fmt.Println(myElevator.State)
 			//fmt.Println(myElevator.Orders[2][2].Status)

@@ -1,5 +1,5 @@
 package Network
-
+/*
 import (
 	"flag"
 	"fmt"
@@ -89,3 +89,4 @@ func Networkmain() {
 		}
 	}
 }
+*/

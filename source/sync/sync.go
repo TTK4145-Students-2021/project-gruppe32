@@ -2,9 +2,11 @@ package sync
 
 import (
 	"fmt"
+	"time"
 
 	"../OrderDistributor"
 	"../UtilitiesTypes"
+	
 )
 
 func Test() {
@@ -24,7 +26,7 @@ func Test() {
 }
 
 var buffer = make(chan UtilitiesTypes.Msg, 100)
-var OtherElevators = []UtilitiesTypes.Elevator
+var OtherElevators = []UtilitiesTypes.Elevator{}
 
 func ListContains(list []int, new int) bool{
 	for i := 0; i < len(list); i++ {
@@ -35,50 +37,119 @@ func ListContains(list []int, new int) bool{
 	return false
 }
 
+func ContainsID(list []UtilitiesTypes.Elevator, new int) bool{
+	for i := 0; i < len(list); i++ {
+		if list[i].ID == new{
+			return true
+		}
+	}
+	return false
+}
+
+var iter = 0
+var Message UtilitiesTypes.Msg
+
+var (
+	numPeers int
+	receivedMsg []int
+	LastIncomingMessage UtilitiesTypes.Msg
+)
+	
+
+
+
+
+func AddToMsgBuf(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, id int, newOrder bool) {
+	iter ++
+	Message.MsgID =iter
+	Message.Elevator = myElev
+	Message.IsNewOrder = newOrder
+	Message.NewOrderTakerID = id
+	Message.IsReceived = false
+	Message.LocalID = myElev.ID
+
+	buffer <- Message
+}
+
+func SendMessage(msgChan UtilitiesTypes.MsgChan){
+	msg := <-buffer
+	for {
+		fmt.Println(msg)
+		msgChan.SendChan <- msg
+		if len(receivedMsg) >= numPeers{
+			msg := <- buffer
+			receivedMsg = receivedMsg[:0]
+			msgChan.SendChan <- msg
+		}
+		if msg == 0 {
+			break
+		}
+	// hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
+	// Alle hall orders til heisen som ikke lenger er i Peers må noen andre heiser ta ordrene.
+}
+	
+}
+
+func ConfirmationMessage(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan){
+	var ConMessage UtilitiesTypes.Msg
+	ConMessage.IsReceived = true
+	ConMessage.LocalID = myElev.ID
+	ConMessage.MsgID = incomingMsg.MsgID
+	msgChan.SendChan <- ConMessage
+	time.Sleep(2*time.Millisecond)
+	
+
+
+}
+
 func Sync(msgChan UtilitiesTypes.MsgChan, myElev UtilitiesTypes.Elevator) {
-	var (
-		numPeers int
-		receivedMsg []int
-	)
 	for{
 		select{
 		case incomingMsg := <- msgChan.RecChan:
+			if !(LastIncomingMessage.MsgID==incomingMsg.MsgID && LastIncomingMessage.LocalID==incomingMsg.LocalID){
+
 			if incomingMsg.IsReceived{
 					if !ListContains(receivedMsg, incomingMsg.LocalID){
 						receivedMsg = append(receivedMsg,incomingMsg.LocalID)
 						if len(receivedMsg) >= numPeers{
 							// stoppe timer??
-							receivedMsg = receivedMsg[:0]
+							
 						}
 					}
 					// hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
 				// Alle hall orders til heisen som ikke lenger er i Peers må noen andre heiser ta ordrene.
 				// 
 			} else if incomingMsg.IsNewOrder{
+				ConfirmationMessage(incomingMsg, myElev, msgChan)
+				fmt.Println(incomingMsg.Elevator)
+				fmt.Println(incomingMsg.Order)
 				if incomingMsg.NewOrderTakerID == myElev.ID {
 					myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
 				}
 
 			}
 			} else{
-				if !ListContains(OtherElevators.ID, incomingMsg.LocalID){
+				ConfirmationMessage(incomingMsg, myElev, msgChan)
+				if !ContainsID(OtherElevators, incomingMsg.LocalID){
 					OtherElevators = append(OtherElevators, incomingMsg.Elevator)
 				}
-				for i:=0, i < len(OtherElevators), i++ {
+				for i:=0; i < len(OtherElevators);i++ {
 					if OtherElevators[i].ID == incomingMsg.LocalID {
 						OtherElevators[i] = incomingMsg.Elevator
 				}
 			}
+		
 		}
-
-
-		}
-		case sendingMsg := <- msgChan.SendChan:
-	
-	
-
 	}
 }
+
+
+}
+	
+	
+
+
+/*
 
 func Networkmain() {
 	// Our id can be anything. Here we pass it on the command line, using
@@ -142,3 +213,4 @@ func Networkmain() {
 	}
 }
 
+*/
