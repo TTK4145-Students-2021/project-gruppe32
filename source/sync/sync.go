@@ -64,9 +64,9 @@ func Sync(msgChan UtilitiesTypes.MsgChan, myElev UtilitiesTypes.Elevator) {
 				if !ListContains(OtherElevators.ID, incomingMsg.LocalID){
 					OtherElevators = append(OtherElevators, incomingMsg.Elevator)
 				}
-			for i:=0, i < len(OtherElevators), i++ {
-				if OtherElevators[i].ID == incomingMsg.LocalID {
-					OtherElevators[i] = incomingMsg.Elevator
+				for i:=0, i < len(OtherElevators), i++ {
+					if OtherElevators[i].ID == incomingMsg.LocalID {
+						OtherElevators[i] = incomingMsg.Elevator
 				}
 			}
 		}
