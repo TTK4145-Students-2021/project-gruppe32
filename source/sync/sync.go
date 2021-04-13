@@ -6,6 +6,7 @@ import (
 
 	"../OrderDistributor"
 	"../UtilitiesTypes"
+	"../elevio"
 	
 )
 
@@ -20,17 +21,17 @@ func Test() {
 	Heis1.Orders[0][2].Status = UtilitiesTypes.Active
 
 	var OtherElevators = []UtilitiesTypes.Elevator{Heis1, Heis2}
-	bestId := OrderDistributor.CostCalculator(Heis3, OtherElevators, 1, 0)
+	bestId := OrderDistributor.CostCalculator(OtherElevators, 1, 0)
 	fmt.Println(bestId)
 
 }
 
-var msgQueue = []UtilitiesTypes.Msg{}
-var OtherElevators = []UtilitiesTypes.Elevator{}
+var MsgQueue = []UtilitiesTypes.Msg{}
+var OnlineElevators = []UtilitiesTypes.Elevator{}
 
 func TestingNetworkElev() {
-	for i :=0; i < len(OtherElevators); i++ {
-	fmt.Println(OtherElevators[i])
+	for i :=0; i < len(OnlineElevators); i++ {
+	fmt.Println(OnlineElevators[i].Orders)
 	}
 }
 
@@ -62,7 +63,12 @@ var (
 )
 	
 
+func AddHallOrder(myElev UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType){
+	bestId := OrderDistributor.CostCalculator(OnlineElevators, btnFloor, btnType)
+	order := UtilitiesTypes.Order{Floor: btnFloor, ButtonType: int(btnType), Status: UtilitiesTypes.Active, Finished: false}
+	AddToMsgQueue(myElev, order, bestId, true)
 
+}
 
 
 func AddToMsgQueue(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, id int, newOrder bool) {
@@ -70,24 +76,25 @@ func AddToMsgQueue(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, i
 	Message.MsgID =iter
 	Message.Elevator = myElev
 	Message.IsNewOrder = newOrder
+	Message.Order = order
 	Message.NewOrderTakerID = id
 	Message.IsReceived = false
 	Message.LocalID = myElev.ID
-	msgQueue = append(msgQueue, Message)
+	MsgQueue = append(MsgQueue, Message)
 }
 
 
 func SendMessage(msgChan UtilitiesTypes.MsgChan){
 	for{
-		if !(len(msgQueue) == 0){
-			msg := msgQueue[0]
+		if !(len(MsgQueue) == 0){
+			msg := MsgQueue[0]
+			msgChan.SendChan <- msg
 			if len(receivedMsg) >= numPeers{
 				fmt.Println("inni if")
-				msgQueue = msgQueue[1:]
+				MsgQueue = MsgQueue[1:]
 				receivedMsg = receivedMsg[:0]
 			}else {
 				time.Sleep(10*time.Millisecond)
-				msgChan.SendChan <- msg
 			}
 
 
@@ -130,8 +137,13 @@ func Sync(msgChan UtilitiesTypes.MsgChan, myElev UtilitiesTypes.Elevator) {
 				// 
 			} else if incomingMsg.IsNewOrder{
 				ConfirmationMessage(incomingMsg, myElev, msgChan)
-				fmt.Println(incomingMsg.Elevator)
-				fmt.Println(incomingMsg.Order)
+				if !ContainsID(OnlineElevators, incomingMsg.LocalID){
+					OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
+				}
+				for i:=0; i < len(OnlineElevators);i++ {
+					if OnlineElevators[i].ID == incomingMsg.LocalID {
+						OnlineElevators[i] = incomingMsg.Elevator
+				}
 				if incomingMsg.NewOrderTakerID == myElev.ID {
 					myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
 				}
@@ -139,21 +151,23 @@ func Sync(msgChan UtilitiesTypes.MsgChan, myElev UtilitiesTypes.Elevator) {
 			}
 			} else{
 				ConfirmationMessage(incomingMsg, myElev, msgChan)
-				if !ContainsID(OtherElevators, incomingMsg.LocalID){
-					OtherElevators = append(OtherElevators, incomingMsg.Elevator)
+				if !ContainsID(OnlineElevators, incomingMsg.LocalID){
+					OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
 				}
-				for i:=0; i < len(OtherElevators);i++ {
-					if OtherElevators[i].ID == incomingMsg.LocalID {
-						OtherElevators[i] = incomingMsg.Elevator
+				for i:=0; i < len(OnlineElevators);i++ {
+					if OnlineElevators[i].ID == incomingMsg.LocalID {
+						OnlineElevators[i] = incomingMsg.Elevator
 				}
 			}
 		
 		}
 	}
 }
-
+	}
 
 }
+
+
 
 
 	

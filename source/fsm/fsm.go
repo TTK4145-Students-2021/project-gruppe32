@@ -1,7 +1,6 @@
 package fsm
 
 import (
-	"fmt"
 
 	"../Requests"
 	"../UtilitiesTypes"
@@ -36,7 +35,6 @@ func OnRequestButtonPress(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType
 			Requests.SetStartTime()
 		} else {
 			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
-			fmt.Println(myElev.State)
 		}
 		break
 

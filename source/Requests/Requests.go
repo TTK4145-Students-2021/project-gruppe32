@@ -3,8 +3,6 @@ package Requests
 import (
 	"time"
 
-	"fmt"
-
 	"../UtilitiesTypes"
 	"../elevio"
 )
@@ -45,10 +43,8 @@ func ClearAllLights(numFloors int, numButtons int) {
 
 func RequestAbove(elev UtilitiesTypes.Elevator, numFloors int, numButtons int) bool {
 	for f := elev.Floor + 1; f < numFloors; f++ {
-		fmt.Println(f)
 		for b := 0; b < numButtons; b++ {
 			if elev.Orders[f][b].Status == UtilitiesTypes.Active {
-				fmt.Printf("order over")
 				return true
 			}
 		}

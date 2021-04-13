@@ -16,9 +16,7 @@ var myElevator UtilitiesTypes.Elevator
 
 func DoorState() {
 	for {
-		//fmt.Printf("Door state")
 		if Requests.TimeOut(3) {
-			//fmt.Printf("Timeout")
 			fsm.OnDoorTimeout(&myElevator)
 		}
 	}
@@ -29,7 +27,7 @@ func main() {
 	sync.LastIncomingMessage.MsgID = 0
 	sync.LastIncomingMessage.LocalID = 0
 
-	id := "heis1"
+	id := "heis2"
 
 	numFloors := 4
 	numButtons := 3
@@ -50,7 +48,7 @@ func main() {
 
 	elevio.Init("localhost:15657", numFloors)
 	myElevator.State = fsm.IDLE
-	myElevator.ID = 1
+	myElevator.ID = 2
 	Requests.ClearAllLights(numFloors, numButtons)
 
 	//sync.Test()
@@ -58,6 +56,7 @@ func main() {
 	go bcast.Transmitter(16569, msgChan.SendChan)
 	go bcast.Receiver(16569, msgChan.RecChan)
 	go sync.SendMessage(msgChan)
+	
 	
 
 
@@ -89,16 +88,18 @@ func main() {
 	for {
 		select {
 		case a := <-drv_buttons:
-			Order1 := UtilitiesTypes.Order{Floor: 1, ButtonType: 1}
-			sync.AddToMsgQueue(myElevator,Order1, 1,true)
-			fmt.Println("ute av send")
+			Order1 := UtilitiesTypes.Order{Floor: -1, ButtonType: -1}
+			if (a.Button == elevio.BT_Cab) {
 			fsm.OnRequestButtonPress(&myElevator, a.Floor, a.Button)
-			//fmt.Println(myElevator.State)
-			//fmt.Println(myElevator.Orders[2][2].Status)
-			sync.TestingNetworkElev()
+			sync.AddToMsgQueue(myElevator,Order1, 1, false)
+			} else {
+				sync.AddHallOrder(myElevator,a.Floor, a.Button)
+			}
 		case a := <-drv_floors:
+			Order1 := UtilitiesTypes.Order{Floor: -1, ButtonType: -1}
 			fsm.OnFloorArrival(&myElevator, a)
-			sync.TestingNetworkElev()
+			sync.AddToMsgQueue(myElevator,Order1, 1,false)
+			//sync.TestingNetworkElev()
 		}
 	}
 
