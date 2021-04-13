@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
 
 	"./Network/network/bcast"
 	"./Requests"
@@ -60,7 +60,8 @@ func main() {
 		case a := <-drv_buttons:
 			Order1 := UtilitiesTypes.Order{Floor: 1, ButtonType: 1}
 			sync.AddToMsgBuf(myElevator,Order1, 1,true)
-			//sync.SendMessage(msgChan)
+			sync.SendMessage(msgChan)
+			fmt.Println("ute av send")
 			fsm.OnRequestButtonPress(&myElevator, a.Floor, a.Button)
 			//fmt.Println(myElevator.State)
 			//fmt.Println(myElevator.Orders[2][2].Status)

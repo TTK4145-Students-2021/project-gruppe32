@@ -69,11 +69,15 @@ func AddToMsgBuf(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, id 
 	Message.LocalID = myElev.ID
 
 	buffer <- Message
+	fmt.Println("length of buffer",len(buffer))
 }
+
 
 func SendMessage(msgChan UtilitiesTypes.MsgChan){
 	msg := <-buffer
-	for {
+	fmt.Println("heyoo")
+
+	for i := 1; i <= len(buffer); i++{
 		fmt.Println(msg)
 		msgChan.SendChan <- msg
 		if len(receivedMsg) >= numPeers{
@@ -81,14 +85,17 @@ func SendMessage(msgChan UtilitiesTypes.MsgChan){
 			receivedMsg = receivedMsg[:0]
 			msgChan.SendChan <- msg
 		}
-		if msg == 0 {
+		if len(buffer) == 0 {
+			fmt.Println("tittentei")
 			break
 		}
+	}
+}
 	// hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
 	// Alle hall orders til heisen som ikke lenger er i Peers må noen andre heiser ta ordrene.
-}
+
 	
-}
+
 
 func ConfirmationMessage(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan){
 	var ConMessage UtilitiesTypes.Msg
@@ -97,10 +104,9 @@ func ConfirmationMessage(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.E
 	ConMessage.MsgID = incomingMsg.MsgID
 	msgChan.SendChan <- ConMessage
 	time.Sleep(2*time.Millisecond)
-	
-
-
 }
+
+
 
 func Sync(msgChan UtilitiesTypes.MsgChan, myElev UtilitiesTypes.Elevator) {
 	for{
