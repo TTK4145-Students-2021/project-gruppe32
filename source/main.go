@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"./Network/network/bcast"
+	"./Network/network/peers"
 	"./Requests"
 	"./UtilitiesTypes"
 	"./elevio"
@@ -28,6 +29,8 @@ func main() {
 	sync.LastIncomingMessage.MsgID = 0
 	sync.LastIncomingMessage.LocalID = 0
 
+	id := "heis1"
+
 	numFloors := 4
 	numButtons := 3
 	drv_buttons := make(chan elevio.ButtonEvent)
@@ -47,28 +50,60 @@ func main() {
 
 	elevio.Init("localhost:15657", numFloors)
 	myElevator.State = fsm.IDLE
+	myElevator.ID = 1
 	Requests.ClearAllLights(numFloors, numButtons)
 
 	//sync.Test()
-	//go sync.Sync(msgChan, myElevator)
+	go sync.Sync(msgChan, myElevator)
 	go bcast.Transmitter(16569, msgChan.SendChan)
 	go bcast.Receiver(16569, msgChan.RecChan)
+	go sync.SendMessage(msgChan)
+	
+
+
+	peerUpdateCh := make(chan peers.PeerUpdate)
+	// We can disable/enable the transmitter after it has been started.
+	// This could be used to signal that we are somehow "unavailable".
+	peerTxEnable := make(chan bool)
+	go peers.Transmitter(15652, id, peerTxEnable)
+	go peers.Receiver(15652, peerUpdateCh)
+
+	go func() {
+		fmt.Println("Started")
+	for {
+		select {
+		case p := <-peerUpdateCh:
+			fmt.Printf("Peer update:\n")
+			fmt.Printf("  Peers:    %q\n", p.Peers)
+			fmt.Printf("  New:      %q\n", p.New)
+			fmt.Printf("  Lost:     %q\n", p.Lost)
+
+			
+		}
+	}
+}()
 
 	go DoorState()
+
+
 	for {
 		select {
 		case a := <-drv_buttons:
 			Order1 := UtilitiesTypes.Order{Floor: 1, ButtonType: 1}
-			sync.AddToMsgBuf(myElevator,Order1, 1,true)
-			sync.SendMessage(msgChan)
+			sync.AddToMsgQueue(myElevator,Order1, 1,true)
 			fmt.Println("ute av send")
 			fsm.OnRequestButtonPress(&myElevator, a.Floor, a.Button)
 			//fmt.Println(myElevator.State)
 			//fmt.Println(myElevator.Orders[2][2].Status)
+			sync.TestingNetworkElev()
 		case a := <-drv_floors:
 			fsm.OnFloorArrival(&myElevator, a)
+			sync.TestingNetworkElev()
 		}
 	}
+
+
+	
 
 
 

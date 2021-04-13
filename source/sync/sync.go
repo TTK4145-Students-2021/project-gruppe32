@@ -25,8 +25,14 @@ func Test() {
 
 }
 
-var buffer = make(chan UtilitiesTypes.Msg, 100)
+var msgQueue = []UtilitiesTypes.Msg{}
 var OtherElevators = []UtilitiesTypes.Elevator{}
+
+func TestingNetworkElev() {
+	for i :=0; i < len(OtherElevators); i++ {
+	fmt.Println(OtherElevators[i])
+	}
+}
 
 func ListContains(list []int, new int) bool{
 	for i := 0; i < len(list); i++ {
@@ -50,7 +56,7 @@ var iter = 0
 var Message UtilitiesTypes.Msg
 
 var (
-	numPeers int
+	numPeers = 2
 	receivedMsg []int
 	LastIncomingMessage UtilitiesTypes.Msg
 )
@@ -59,7 +65,7 @@ var (
 
 
 
-func AddToMsgBuf(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, id int, newOrder bool) {
+func AddToMsgQueue(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, id int, newOrder bool) {
 	iter ++
 	Message.MsgID =iter
 	Message.Elevator = myElev
@@ -67,29 +73,26 @@ func AddToMsgBuf(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, id 
 	Message.NewOrderTakerID = id
 	Message.IsReceived = false
 	Message.LocalID = myElev.ID
-
-	buffer <- Message
-	fmt.Println("length of buffer",len(buffer))
+	msgQueue = append(msgQueue, Message)
 }
 
 
 func SendMessage(msgChan UtilitiesTypes.MsgChan){
-	msg := <-buffer
-	fmt.Println("heyoo")
+	for{
+		if !(len(msgQueue) == 0){
+			msg := msgQueue[0]
+			if len(receivedMsg) >= numPeers{
+				fmt.Println("inni if")
+				msgQueue = msgQueue[1:]
+				receivedMsg = receivedMsg[:0]
+			}else {
+				time.Sleep(10*time.Millisecond)
+				msgChan.SendChan <- msg
+			}
 
-	for i := 1; i <= len(buffer); i++{
-		fmt.Println(msg)
-		msgChan.SendChan <- msg
-		if len(receivedMsg) >= numPeers{
-			msg := <- buffer
-			receivedMsg = receivedMsg[:0]
-			msgChan.SendChan <- msg
-		}
-		if len(buffer) == 0 {
-			fmt.Println("tittentei")
-			break
-		}
+
 	}
+}
 }
 	// hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
 	// Alle hall orders til heisen som ikke lenger er i Peers må noen andre heiser ta ordrene.
@@ -151,6 +154,8 @@ func Sync(msgChan UtilitiesTypes.MsgChan, myElev UtilitiesTypes.Elevator) {
 
 
 }
+
+
 	
 	
 
