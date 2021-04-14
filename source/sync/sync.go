@@ -70,6 +70,24 @@ func AddHallOrder(myElev UtilitiesTypes.Elevator, btnFloor int, btnType elevio.B
 
 }
 
+func UpdateHallLights(){
+	for i :=0; i < len(OnlineElevators); i++ {
+		for f:=0; f < UtilitiesTypes.NumFloors; f++ {
+			if (OnlineElevators[i].Orders[f][elevio.BT_HallUp].Status == UtilitiesTypes.Active){
+				elevio.SetButtonLamp(elevio.BT_HallUp,f,true)
+			}else{
+				elevio.SetButtonLamp(elevio.BT_HallUp,f,false)
+			}
+			if (OnlineElevators[i].Orders[f][elevio.BT_HallDown].Status == UtilitiesTypes.Active){
+				elevio.SetButtonLamp(elevio.BT_HallDown,f,true)
+			}else{
+				elevio.SetButtonLamp(elevio.BT_HallDown,f,false)
+			}
+		}
+	}
+
+}
+
 func AddToMsgQueue(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, id int, newOrder bool) {
 	iter++
 	Message.MsgID = iter
@@ -95,6 +113,7 @@ func SendMessage(msgChan UtilitiesTypes.MsgChan) {
 			}
 
 		}
+		time.Sleep(4 * time.Millisecond) // Coopratrive routine
 	}
 }
 
@@ -110,7 +129,10 @@ func ConfirmationMessage(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.E
 	time.Sleep(2 * time.Millisecond)
 }
 
+
+
 func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan) {
+	UpdateHallLights()
 	if !(incomingMsg.LocalID == myElev.ID) {
 
 		if incomingMsg.IsReceived {
@@ -136,6 +158,7 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 					}
 				}
 			}
+			
 		}
 	}
 

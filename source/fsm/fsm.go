@@ -31,7 +31,8 @@ func OnInitBetweenFloors(myElev *UtilitiesTypes.Elevator) {
 
 func DoorState(myElev *UtilitiesTypes.Elevator) {
 	for {
-		if Requests.TimeOut(3) {
+		if Requests.TimeOut(3, *myElev) {
+			fmt.Println("TimerOut")
 			OnDoorTimeout(myElev)
 		}
 	}
@@ -43,6 +44,9 @@ func OnRequestButtonPress(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType
 		fmt.Println("door")
 		if !(myElev.Floor == btnFloor) {
 			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
+		} else {
+			elevio.SetDoorOpenLamp(true)
+			Requests.SetStartTime()
 		}
 		break
 
@@ -56,6 +60,7 @@ func OnRequestButtonPress(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType
 			fmt.Println("etter if")
 			elevio.SetDoorOpenLamp(true)
 			Requests.SetStartTime()
+			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Inactive
 			myElev.State = UtilitiesTypes.DOOR
 		} else {
 			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active

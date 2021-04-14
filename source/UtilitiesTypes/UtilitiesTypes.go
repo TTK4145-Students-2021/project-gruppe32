@@ -2,7 +2,7 @@ package UtilitiesTypes
 
 import "../elevio"
 
-const numFloors = 4
+const NumFloors = 4
 
 const numButtons = 3
 
@@ -38,7 +38,7 @@ type Elevator struct {
 	Dir    elevio.MotorDirection
 	Floor  int
 	State  State
-	Orders [numFloors][numButtons]Order
+	Orders [NumFloors][numButtons]Order
 }
 
 type Msg struct {
@@ -60,7 +60,7 @@ func getOrder(floor int, buttonType int) Order {
 	return myElevator.Orders[floor][buttonType]
 }
 
-func getOrderList() [numFloors][numButtons]Order {
+func getOrderList() [NumFloors][numButtons]Order {
 	return myElevator.Orders
 }
 
@@ -70,7 +70,7 @@ func SetOrder(myElevator *Elevator, floor int, buttonType elevio.ButtonType, sta
 
 }
 
-func setElevator(floor int, dir elevio.MotorDirection, state State, order [numFloors][numButtons]Order) Elevator {
+func setElevator(floor int, dir elevio.MotorDirection, state State, order [NumFloors][numButtons]Order) Elevator {
 	myElevator.Floor = floor
 	myElevator.Dir = dir
 	myElevator.State = state

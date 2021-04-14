@@ -10,6 +10,8 @@ import (
 	"./elevio"
 	"./fsm"
 	"./sync"
+	"os"
+	"strconv"
 )
 
 var myElevator UtilitiesTypes.Elevator
@@ -18,8 +20,8 @@ func main() {
 	sync.LastIncomingMessage.MsgID = 0
 	sync.LastIncomingMessage.LocalID = 0
 
-	id := "heis1"
-
+	id := os.Args[1]
+	
 	numFloors := 4
 	numButtons := 3
 	drv_buttons := make(chan elevio.ButtonEvent)
@@ -36,24 +38,24 @@ func main() {
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 
-	elevio.Init("localhost:15658", numFloors)
+	elevio.Init(fmt.Sprintf("localhost:%s", id), numFloors)
 	myElevator.State = fsm.IDLE
-	myElevator.ID = 1
+	myElevator.ID, _ = strconv.Atoi(id)
 	Requests.ClearAllLights(numFloors, numButtons)
 
 	//sync.Test()
 	//go sync.Sync(msgChan, &myElevator)
 
-	go bcast.Transmitter(16569, msgChan.SendChan)
-	go bcast.Receiver(16569, msgChan.RecChan)
+	go bcast.Transmitter(12569, msgChan.SendChan)
+	go bcast.Receiver(12569, msgChan.RecChan)
 	go sync.SendMessage(msgChan)
 
 	peerUpdateCh := make(chan peers.PeerUpdate)
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15652, id, peerTxEnable)
-	go peers.Receiver(15652, peerUpdateCh)
+	go peers.Transmitter(10652, id, peerTxEnable)
+	go peers.Receiver(10652, peerUpdateCh)
 
 	go func() {
 		fmt.Println("Started")
@@ -70,14 +72,15 @@ func main() {
 	}()
 
 	go fsm.DoorState(&myElevator)
+	
 
 	for {
 		select {
 		case a := <-drv_buttons:
 			if a.Button == elevio.BT_Cab {
 				fsm.OnRequestButtonPress(&myElevator, a.Floor, a.Button)
-				Order2 := UtilitiesTypes.Order{Floor: a.Floor, ButtonType: int(a.Button)}
-				sync.AddToMsgQueue(myElevator, Order2, 1, false)
+				Order1 := UtilitiesTypes.Order{Floor: -1, ButtonType: -1}
+				sync.AddToMsgQueue(myElevator, Order1, 1, false)
 			} else {
 				sync.AddHallOrder(myElevator, a.Floor, a.Button)
 			}
@@ -85,11 +88,14 @@ func main() {
 			Order1 := UtilitiesTypes.Order{Floor: -1, ButtonType: -1}
 			fsm.OnFloorArrival(&myElevator, a)
 			sync.AddToMsgQueue(myElevator, Order1, 1, false)
+			
 
 		case incomingMsg := <-msgChan.RecChan:
 			sync.Run(incomingMsg, myElevator, msgChan)
 			if sync.NewOrder(incomingMsg, &myElevator) {
 				fmt.Println(myElevator.State)
+				Order1 := UtilitiesTypes.Order{Floor: -1, ButtonType: -1}
+				sync.AddToMsgQueue(myElevator, Order1, 1, false)
 				fsm.OnRequestButtonPress(&myElevator, incomingMsg.Order.Floor, elevio.ButtonType(incomingMsg.Order.ButtonType))
 			}
 
