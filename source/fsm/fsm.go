@@ -1,6 +1,7 @@
 package fsm
 
 import (
+	"fmt"
 
 	"../Requests"
 	"../UtilitiesTypes"
@@ -20,20 +21,27 @@ const (
 	DOOR         = 3
 )
 
-var state State
+//var state State
 
-func OnInitBetweenFloors(myElev UtilitiesTypes.Elevator) {
+func OnInitBetweenFloors(myElev *UtilitiesTypes.Elevator) {
 	elevio.SetMotorDirection(elevio.MD_Down)
 	myElev.Dir = elevio.MD_Down
 	myElev.State = UtilitiesTypes.MOVING
 }
 
+func DoorState(myElev *UtilitiesTypes.Elevator) {
+	for {
+		if Requests.TimeOut(3) {
+			OnDoorTimeout(myElev)
+		}
+	}
+}
+
 func OnRequestButtonPress(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) {
 	switch myElev.State {
 	case DOOR:
-		if myElev.Floor == btnFloor {
-			Requests.SetStartTime()
-		} else {
+		fmt.Println("door")
+		if !(myElev.Floor == btnFloor) {
 			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
 		}
 		break
@@ -43,7 +51,9 @@ func OnRequestButtonPress(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType
 		break
 
 	case IDLE:
+		fmt.Println("før if")
 		if myElev.Floor == btnFloor {
+			fmt.Println("etter if")
 			elevio.SetDoorOpenLamp(true)
 			Requests.SetStartTime()
 			myElev.State = UtilitiesTypes.DOOR
@@ -77,6 +87,7 @@ func OnFloorArrival(myElev *UtilitiesTypes.Elevator, newFloor int) {
 		break
 
 	default:
+		//assert("THIS SHOULD NOT BE CALLEd")
 		break
 	}
 }
@@ -170,7 +181,7 @@ func OnDoorTimeout(myElev *UtilitiesTypes.Elevator) {
 
 		case DOOR:
 	}
-}
+}var state State
 }
 
 

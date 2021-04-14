@@ -7,7 +7,6 @@ import (
 	"../OrderDistributor"
 	"../UtilitiesTypes"
 	"../elevio"
-	
 )
 
 func Test() {
@@ -30,23 +29,23 @@ var MsgQueue = []UtilitiesTypes.Msg{}
 var OnlineElevators = []UtilitiesTypes.Elevator{}
 
 func TestingNetworkElev() {
-	for i :=0; i < len(OnlineElevators); i++ {
-	fmt.Println(OnlineElevators[i].Orders)
+	for i := 0; i < len(OnlineElevators); i++ {
+		fmt.Println(OnlineElevators[i].Orders)
 	}
 }
 
-func ListContains(list []int, new int) bool{
+func ListContains(list []int, new int) bool {
 	for i := 0; i < len(list); i++ {
-		if list[i] == new{
+		if list[i] == new {
 			return true
 		}
 	}
 	return false
 }
 
-func ContainsID(list []UtilitiesTypes.Elevator, new int) bool{
+func ContainsID(list []UtilitiesTypes.Elevator, new int) bool {
 	for i := 0; i < len(list); i++ {
-		if list[i].ID == new{
+		if list[i].ID == new {
 			return true
 		}
 	}
@@ -57,23 +56,23 @@ var iter = 0
 var Message UtilitiesTypes.Msg
 
 var (
-	numPeers = 2
-	receivedMsg []int
+	numPeers            = 1
+	receivedMsg         []int
 	LastIncomingMessage UtilitiesTypes.Msg
 )
-	
 
-func AddHallOrder(myElev UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType){
+func AddHallOrder(myElev UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) {
 	bestId := OrderDistributor.CostCalculator(OnlineElevators, btnFloor, btnType)
 	order := UtilitiesTypes.Order{Floor: btnFloor, ButtonType: int(btnType), Status: UtilitiesTypes.Active, Finished: false}
 	AddToMsgQueue(myElev, order, bestId, true)
+	fmt.Println("hall order")
+	fmt.Println(bestId)
 
 }
 
-
 func AddToMsgQueue(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, id int, newOrder bool) {
-	iter ++
-	Message.MsgID =iter
+	iter++
+	Message.MsgID = iter
 	Message.Elevator = myElev
 	Message.IsNewOrder = newOrder
 	Message.Order = order
@@ -83,96 +82,145 @@ func AddToMsgQueue(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, i
 	MsgQueue = append(MsgQueue, Message)
 }
 
-
-func SendMessage(msgChan UtilitiesTypes.MsgChan){
-	for{
-		if !(len(MsgQueue) == 0){
+func SendMessage(msgChan UtilitiesTypes.MsgChan) {
+	for {
+		if !(len(MsgQueue) == 0) {
 			msg := MsgQueue[0]
 			msgChan.SendChan <- msg
-			if len(receivedMsg) >= numPeers{
-				fmt.Println("inni if")
+			if len(receivedMsg) >= numPeers {
 				MsgQueue = MsgQueue[1:]
 				receivedMsg = receivedMsg[:0]
-			}else {
-				time.Sleep(10*time.Millisecond)
+			} else {
+				time.Sleep(10 * time.Millisecond)
 			}
 
-
+		}
 	}
 }
-}
-	// hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
-	// Alle hall orders til heisen som ikke lenger er i Peers må noen andre heiser ta ordrene.
 
-	
+// hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
+// Alle hall orders til heisen som ikke lenger er i Peers må noen andre heiser ta ordrene.
 
-
-func ConfirmationMessage(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan){
+func ConfirmationMessage(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan) {
 	var ConMessage UtilitiesTypes.Msg
 	ConMessage.IsReceived = true
 	ConMessage.LocalID = myElev.ID
 	ConMessage.MsgID = incomingMsg.MsgID
 	msgChan.SendChan <- ConMessage
-	time.Sleep(2*time.Millisecond)
+	time.Sleep(2 * time.Millisecond)
 }
 
+func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan) {
+	if !(incomingMsg.LocalID == myElev.ID) {
 
+		if incomingMsg.IsReceived {
+			if !ListContains(receivedMsg, incomingMsg.LocalID) {
+				receivedMsg = append(receivedMsg, incomingMsg.LocalID)
+				if len(receivedMsg) >= numPeers {
+					// stoppe timer??
 
-func Sync(msgChan UtilitiesTypes.MsgChan, myElev UtilitiesTypes.Elevator) {
-	for{
-		select{
-		case incomingMsg := <- msgChan.RecChan:
-			if !(LastIncomingMessage.MsgID==incomingMsg.MsgID && LastIncomingMessage.LocalID==incomingMsg.LocalID){
-
-			if incomingMsg.IsReceived{
-					if !ListContains(receivedMsg, incomingMsg.LocalID){
-						receivedMsg = append(receivedMsg,incomingMsg.LocalID)
-						if len(receivedMsg) >= numPeers{
-							// stoppe timer??
-							
-						}
-					}
-					// hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
-				// Alle hall orders til heisen som ikke lenger er i Peers må noen andre heiser ta ordrene.
-				// 
-			} else if incomingMsg.IsNewOrder{
-				ConfirmationMessage(incomingMsg, myElev, msgChan)
-				if !ContainsID(OnlineElevators, incomingMsg.LocalID){
+				}
+			}
+			// hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
+			// Alle hall orders til heisen som ikke lenger er i Peers må noen andre heiser ta ordrene.
+			//
+		} else {
+			ConfirmationMessage(incomingMsg, myElev, msgChan)
+			if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
+				if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
 					OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
 				}
-				for i:=0; i < len(OnlineElevators);i++ {
+				for i := 0; i < len(OnlineElevators); i++ {
 					if OnlineElevators[i].ID == incomingMsg.LocalID {
 						OnlineElevators[i] = incomingMsg.Elevator
+					}
+				}
+			}
+		}
+	}
+
+}
+func NewOrder(incomingMsg UtilitiesTypes.Msg, myElev *UtilitiesTypes.Elevator) bool {
+	shouldITake := false
+	if incomingMsg.IsNewOrder {
+		if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
+			LastIncomingMessage.MsgID = incomingMsg.MsgID
+			LastIncomingMessage.LocalID = incomingMsg.LocalID
+			if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
+				OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
+			}
+			for i := 0; i < len(OnlineElevators); i++ {
+				if OnlineElevators[i].ID == incomingMsg.LocalID {
+					OnlineElevators[i] = incomingMsg.Elevator
 				}
 				if incomingMsg.NewOrderTakerID == myElev.ID {
 					myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
+					shouldITake = true
 				}
 
 			}
-			} else{
-				ConfirmationMessage(incomingMsg, myElev, msgChan)
-				if !ContainsID(OnlineElevators, incomingMsg.LocalID){
-					OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
-				}
-				for i:=0; i < len(OnlineElevators);i++ {
-					if OnlineElevators[i].ID == incomingMsg.LocalID {
-						OnlineElevators[i] = incomingMsg.Elevator
+		}
+	}
+	return shouldITake
+}
+
+func Sync(msgChan UtilitiesTypes.MsgChan, myElev *UtilitiesTypes.Elevator) {
+	for {
+		select {
+		case incomingMsg := <-msgChan.RecChan:
+			if !(incomingMsg.LocalID == myElev.ID) {
+
+				if incomingMsg.IsReceived {
+					fmt.Println("Is Recived")
+					if !ListContains(receivedMsg, incomingMsg.LocalID) {
+						receivedMsg = append(receivedMsg, incomingMsg.LocalID)
+						if len(receivedMsg) >= numPeers {
+							// stoppe timer??
+
+						}
+					}
+					// hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
+					// Alle hall orders til heisen som ikke lenger er i Peers må noen andre heiser ta ordrene.
+					//
+				} else {
+					ConfirmationMessage(incomingMsg, *myElev, msgChan)
+					fmt.Println("Con Message")
+					if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
+						if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
+							OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
+						}
+						for i := 0; i < len(OnlineElevators); i++ {
+							if OnlineElevators[i].ID == incomingMsg.LocalID {
+								OnlineElevators[i] = incomingMsg.Elevator
+							}
+						}
+					}
 				}
 			}
-		
+			if incomingMsg.IsNewOrder {
+
+				if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
+					LastIncomingMessage.MsgID = incomingMsg.MsgID
+					LastIncomingMessage.LocalID = incomingMsg.LocalID
+					if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
+						OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
+					}
+					for i := 0; i < len(OnlineElevators); i++ {
+						if OnlineElevators[i].ID == incomingMsg.LocalID {
+							OnlineElevators[i] = incomingMsg.Elevator
+							fmt.Println(OnlineElevators[i].Floor)
+						}
+						if incomingMsg.NewOrderTakerID == myElev.ID {
+							myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
+							fmt.Println(myElev.Orders)
+						}
+
+					}
+				}
+			}
 		}
 	}
 }
-	}
-
-}
-
-
-
-
-	
-	
-
 
 /*
 
