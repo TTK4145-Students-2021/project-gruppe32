@@ -84,27 +84,27 @@ func main() {
 			} else {
 				sync.AddHallOrderToMsgQueue(&myElevator, a.Floor, a.Button)
 			}
-			if a.Floor == myElevator.Floor {
-				sync.ClearHallAtCurrentFloor(myElevator)
-			}
+			//if a.Floor == myElevator.Floor {
+				//sync.ClearHallAtCurrentFloor(myElevator)
+			//}
 		case a := <-drv_floors:
 			fsm.OnFloorArrival(&myElevator, a)
-			if Requests.ShouldStop(myElevator) {
-				sync.ClearHallAtCurrentFloor(myElevator)
-			}
+			//if Requests.ShouldStop(myElevator) {
+				//sync.ClearHallAtCurrentFloor(myElevator)
+			//}
 			sync.AddElevToMsgQueue(myElevator)
 
 		case incomingMsg := <-msgChan.RecChan:
 			sync.Run(incomingMsg, myElevator, msgChan)
+			if incomingMsg.LocalID != myElevator.ID {
 			if sync.ShouldITake(incomingMsg, myElevator) {
 				//fmt.Println(sync.OnlineElevators[1].Orders[1][1].Status)
 				//fmt.Println(sync.OnlineElevators[1].ID)
-				if incomingMsg.LocalID != myElevator.ID {
-					for i := 0; i < len(sync.OnlineElevators); i++ {
-						if sync.OnlineElevators[i].Floor != myElevator.Floor {
-							sync.OnlineElevators[i].Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Inactive
-						}
-					}
+					//for i := 0; i < len(sync.OnlineElevators); i++ {
+						//if sync.OnlineElevators[i].Floor != myElevator.Floor {
+							//sync.OnlineElevators[i].Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Inactive
+						//}
+					//}
 					if myElevator.Floor != incomingMsg.Order.Floor {
 						myElevator.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
 					}
