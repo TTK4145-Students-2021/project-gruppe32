@@ -9,6 +9,7 @@ import (
 	"../elevio"
 )
 
+/*
 func Test() {
 
 	Heis1 := UtilitiesTypes.Elevator{ID: 1, Dir: 0, Floor: 1, State: 3}
@@ -23,16 +24,17 @@ func Test() {
 	bestId := OrderDistributor.CostCalculator(OtherElevators, 1, 0)
 	fmt.Println(bestId)
 
-}
+}*/
 
 var MsgQueue = []UtilitiesTypes.Msg{}
 var OnlineElevators = []UtilitiesTypes.Elevator{}
 
+/*
 func TestingNetworkElev() {
 	for i := 0; i < len(OnlineElevators); i++ {
 		fmt.Println(OnlineElevators[i].Orders)
 	}
-}
+}*/
 
 func ListContains(list []int, new int) bool {
 	for i := 0; i < len(list); i++ {
@@ -56,17 +58,20 @@ var iter = 0
 var Message UtilitiesTypes.Msg
 
 var (
-	numPeers            = 1
+	numPeers            = 2
 	receivedMsg         []int
 	LastIncomingMessage UtilitiesTypes.Msg
 )
 
-func AddHallOrderToMsgQueue(myElev UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) {
+func AddHallOrderToMsgQueue(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) {
 	iter++
 	bestId := OrderDistributor.CostCalculator(OnlineElevators, btnFloor, btnType)
+	if bestId == myElev.ID {
+		myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
+	}
 	order := UtilitiesTypes.Order{Floor: btnFloor, ButtonType: int(btnType), Status: UtilitiesTypes.Active, Finished: false}
 	Message.MsgID = iter
-	Message.Elevator = myElev
+	Message.Elevator = *myElev
 	Message.IsNewOrder = true
 	Message.Order = order
 	Message.NewOrderTakerID = bestId
@@ -109,6 +114,15 @@ func UpdateHallLights() {
 	}
 	time.Sleep(10 * time.Millisecond)
 
+}
+
+func ClearHallAtCurrentFloor(myElev UtilitiesTypes.Elevator) {
+	for btn := 0; btn < 2; btn++ {
+		for i := 0; i < len(OnlineElevators); i++ {
+			OnlineElevators[i].Orders[myElev.Floor][btn].Status = UtilitiesTypes.Inactive
+			OnlineElevators[i].Orders[myElev.Floor][btn].Finished = true
+		}
+	}
 }
 
 func AddElevToMsgQueue(myElev UtilitiesTypes.Elevator) {
@@ -183,11 +197,11 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 			if len(OnlineElevators) != 0 {
 				if ContainsID(OnlineElevators, incomingMsg.LocalID) {
 					for i := 0; i < len(OnlineElevators); i++ {
-						fmt.Println(OnlineElevators[i].ID)
+						fmt.Println(OnlineElevators[i].ID, "Run")
 						fmt.Println(OnlineElevators[i].Orders, "\n")
 						if OnlineElevators[i].ID == incomingMsg.Elevator.ID {
 							OnlineElevators[i] = incomingMsg.Elevator
-							fmt.Println("etter")
+							fmt.Println("etter, Run")
 							fmt.Println(OnlineElevators[i].ID)
 							fmt.Println(OnlineElevators[i].Orders, "\n")
 						}
@@ -220,23 +234,23 @@ func ShouldITake(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator)
 			}
 
 			for i := 0; i < len(OnlineElevators); i++ {
-				fmt.Println(OnlineElevators[i].ID)
+				fmt.Println(OnlineElevators[i].ID, "ShouldITake")
 				fmt.Println(OnlineElevators[i].Orders, "\n")
 				if OnlineElevators[i].ID == incomingMsg.Elevator.ID {
 					OnlineElevators[i] = incomingMsg.Elevator
-					fmt.Println("etter")
+					fmt.Println("etter ShouldITake")
 					fmt.Println(OnlineElevators[i].ID)
 					fmt.Println(OnlineElevators[i].Orders, "\n")
 
 				}
-
-				if incomingMsg.NewOrderTakerID == myElev.ID {
-					shouldITake = true
-
-				}
 			}
 
+			if incomingMsg.NewOrderTakerID == myElev.ID {
+				shouldITake = true
+
+			}
 		}
+
 	}
 	//fmt.Println(OnlineElevators)
 	//fmt.Println("her kommer de på nytt")
