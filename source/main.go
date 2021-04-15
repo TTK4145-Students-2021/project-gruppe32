@@ -3,6 +3,9 @@ package main
 import (
 	"fmt"
 
+	"os"
+	"strconv"
+
 	"./Network/network/bcast"
 	"./Network/network/peers"
 	"./Requests"
@@ -10,8 +13,6 @@ import (
 	"./elevio"
 	"./fsm"
 	"./sync"
-	"os"
-	"strconv"
 )
 
 var myElevator UtilitiesTypes.Elevator
@@ -21,7 +22,7 @@ func main() {
 	sync.LastIncomingMessage.LocalID = 0
 
 	id := os.Args[1]
-	
+
 	numFloors := 4
 	numButtons := 3
 	drv_buttons := make(chan elevio.ButtonEvent)
@@ -72,30 +73,26 @@ func main() {
 	}()
 
 	go fsm.DoorState(&myElevator)
-	
 
 	for {
 		select {
 		case a := <-drv_buttons:
 			if a.Button == elevio.BT_Cab {
 				fsm.OnRequestButtonPress(&myElevator, a.Floor, a.Button)
-				Order1 := UtilitiesTypes.Order{Floor: -1, ButtonType: -1}
-				sync.AddToMsgQueue(myElevator, Order1, 1, false)
+				sync.AddElevToMsgQueue(myElevator)
 			} else {
-				sync.AddHallOrder(myElevator, a.Floor, a.Button)
+				sync.AddHallOrderToMsgQueue(myElevator, a.Floor, a.Button)
 			}
 		case a := <-drv_floors:
-			Order1 := UtilitiesTypes.Order{Floor: -1, ButtonType: -1}
 			fsm.OnFloorArrival(&myElevator, a)
-			sync.AddToMsgQueue(myElevator, Order1, 1, false)
-			
+			sync.AddElevToMsgQueue(myElevator)
 
 		case incomingMsg := <-msgChan.RecChan:
 			sync.Run(incomingMsg, myElevator, msgChan)
-			if sync.NewOrder(incomingMsg, &myElevator) {
+			if sync.ShouldITake(incomingMsg, myElevator) {
+				myElevator.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
 				fmt.Println(myElevator.State)
-				Order1 := UtilitiesTypes.Order{Floor: -1, ButtonType: -1}
-				sync.AddToMsgQueue(myElevator, Order1, 1, false)
+				sync.AddElevToMsgQueue(myElevator)
 				fsm.OnRequestButtonPress(&myElevator, incomingMsg.Order.Floor, elevio.ButtonType(incomingMsg.Order.ButtonType))
 			}
 

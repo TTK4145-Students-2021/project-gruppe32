@@ -20,12 +20,10 @@ func UpdateLights(button chan elevio.ButtonEvent) {
 	}
 }
 
-func SetAllLights(elev UtilitiesTypes.Elevator, numFloors int, numButtons int) {
+func SetAllCabLights(elev UtilitiesTypes.Elevator, numFloors int, numButtons int) {
 	for floor := 0; floor < numFloors; floor++ {
-		for btn := 0; btn < numButtons; btn++ {
-			active := elev.Orders[floor][btn].Status == UtilitiesTypes.Active
-			elevio.SetButtonLamp(elevio.ButtonType(btn), floor, active)
-		}
+		active := elev.Orders[floor][elevio.BT_Cab].Status == UtilitiesTypes.Active
+		elevio.SetButtonLamp(elevio.ButtonType(elevio.BT_Cab), floor, active)
 	}
 }
 
@@ -120,7 +118,7 @@ func ChooseDirection(elev UtilitiesTypes.Elevator) elevio.MotorDirection {
 
 func ClearAtCurrentFloor(elev *UtilitiesTypes.Elevator, numFloors int, numButtons int) {
 	for btn := 0; btn < numButtons; btn++ {
-		elev.Orders[elev.Floor][btn].Status = -1
+		elev.Orders[elev.Floor][btn].Status = UtilitiesTypes.Inactive
 		elev.Orders[elev.Floor][btn].Finished = true
 	}
 }
@@ -136,14 +134,14 @@ func GetStartTime() time.Time {
 }
 
 func TimeOut(seconds time.Duration, myElev UtilitiesTypes.Elevator) bool {
-	if (myElev.State == UtilitiesTypes.DOOR) {
-	seconds = seconds * time.Second
-	begin := GetStartTime()
-	difference := time.Now().Sub(begin)
+	if myElev.State == UtilitiesTypes.DOOR {
+		seconds = seconds * time.Second
+		begin := GetStartTime()
+		difference := time.Now().Sub(begin)
 
-	if difference >= seconds {
-		return true
+		if difference >= seconds {
+			return true
+		}
 	}
-}
-return false
+	return false
 }

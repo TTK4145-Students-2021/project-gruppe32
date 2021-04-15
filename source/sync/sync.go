@@ -61,40 +61,49 @@ var (
 	LastIncomingMessage UtilitiesTypes.Msg
 )
 
-func AddHallOrder(myElev UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) {
+func AddHallOrderToMsgQueue(myElev UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) {
+	iter++
 	bestId := OrderDistributor.CostCalculator(OnlineElevators, btnFloor, btnType)
 	order := UtilitiesTypes.Order{Floor: btnFloor, ButtonType: int(btnType), Status: UtilitiesTypes.Active, Finished: false}
-	AddToMsgQueue(myElev, order, bestId, true)
+	Message.MsgID = iter
+	Message.Elevator = myElev
+	Message.IsNewOrder = true
+	Message.Order = order
+	Message.NewOrderTakerID = bestId
+	Message.IsReceived = false
+	Message.LocalID = myElev.ID
+	MsgQueue = append(MsgQueue, Message)
 	fmt.Println("hall order")
 	fmt.Println(bestId)
 
 }
 
-func UpdateHallLights(){
-	for i :=0; i < len(OnlineElevators); i++ {
-		for f:=0; f < UtilitiesTypes.NumFloors; f++ {
-			if (OnlineElevators[i].Orders[f][elevio.BT_HallUp].Status == UtilitiesTypes.Active){
-				elevio.SetButtonLamp(elevio.BT_HallUp,f,true)
-			}else{
-				elevio.SetButtonLamp(elevio.BT_HallUp,f,false)
+func UpdateHallLights() {
+	for i := 0; i < len(OnlineElevators); i++ {
+		for f := 0; f < UtilitiesTypes.NumFloors; f++ {
+			if OnlineElevators[i].Orders[f][elevio.BT_HallUp].Status == UtilitiesTypes.Active {
+				elevio.SetButtonLamp(elevio.BT_HallUp, f, true)
+				fmt.Println("på")
+			} else {
+				elevio.SetButtonLamp(elevio.BT_HallUp, f, false)
+				fmt.Println("av")
 			}
-			if (OnlineElevators[i].Orders[f][elevio.BT_HallDown].Status == UtilitiesTypes.Active){
-				elevio.SetButtonLamp(elevio.BT_HallDown,f,true)
-			}else{
-				elevio.SetButtonLamp(elevio.BT_HallDown,f,false)
+			if OnlineElevators[i].Orders[f][elevio.BT_HallDown].Status == UtilitiesTypes.Active {
+				elevio.SetButtonLamp(elevio.BT_HallDown, f, true)
+
+			} else {
+				elevio.SetButtonLamp(elevio.BT_HallDown, f, false)
 			}
 		}
 	}
 
 }
 
-func AddToMsgQueue(myElev UtilitiesTypes.Elevator, order UtilitiesTypes.Order, id int, newOrder bool) {
+func AddElevToMsgQueue(myElev UtilitiesTypes.Elevator) {
 	iter++
 	Message.MsgID = iter
 	Message.Elevator = myElev
-	Message.IsNewOrder = newOrder
-	Message.Order = order
-	Message.NewOrderTakerID = id
+	Message.IsNewOrder = false
 	Message.IsReceived = false
 	Message.LocalID = myElev.ID
 	MsgQueue = append(MsgQueue, Message)
@@ -105,6 +114,8 @@ func SendMessage(msgChan UtilitiesTypes.MsgChan) {
 		if !(len(MsgQueue) == 0) {
 			msg := MsgQueue[0]
 			msgChan.SendChan <- msg
+			fmt.Println(msg.MsgID)
+			fmt.Println(msg)
 			if len(receivedMsg) >= numPeers {
 				MsgQueue = MsgQueue[1:]
 				receivedMsg = receivedMsg[:0]
@@ -123,16 +134,20 @@ func SendMessage(msgChan UtilitiesTypes.MsgChan) {
 func ConfirmationMessage(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan) {
 	var ConMessage UtilitiesTypes.Msg
 	ConMessage.IsReceived = true
+	ConMessage.IsNewOrder = false
 	ConMessage.LocalID = myElev.ID
 	ConMessage.MsgID = incomingMsg.MsgID
 	msgChan.SendChan <- ConMessage
 	time.Sleep(2 * time.Millisecond)
 }
 
-
-
 func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan) {
-	UpdateHallLights()
+	//UpdateHallLights()
+	//fmt.Println(incomingMsg.Elevator.ID)
+	for i := 0; i < len(OnlineElevators); i++ {
+		//fmt.Println(OnlineElevators[i].ID)
+		//fmt.Println("---------", i)
+	}
 	if !(incomingMsg.LocalID == myElev.ID) {
 
 		if incomingMsg.IsReceived {
@@ -148,22 +163,34 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 			//
 		} else {
 			ConfirmationMessage(incomingMsg, myElev, msgChan)
-			if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
-				if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
-					OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
-				}
-				for i := 0; i < len(OnlineElevators); i++ {
-					if OnlineElevators[i].ID == incomingMsg.LocalID {
-						OnlineElevators[i] = incomingMsg.Elevator
+
+		}
+		if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
+			LastIncomingMessage.MsgID = incomingMsg.MsgID
+			LastIncomingMessage.LocalID = incomingMsg.LocalID
+			if len(OnlineElevators) != 0 {
+				if ContainsID(OnlineElevators, incomingMsg.LocalID) {
+					for i := 0; i < len(OnlineElevators); i++ {
+						if OnlineElevators[i].ID == incomingMsg.LocalID {
+							OnlineElevators[i] = incomingMsg.Elevator
+						}
+					}
+				} else if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
+					if incomingMsg.LocalID != 0 {
+						OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
+						fmt.Println("legger til i lista")
+						//fmt.Println(OnlineElevators)
+						//fmt.Println(incomingMsg.LocalID)
 					}
 				}
+			} else {
+				OnlineElevators = append(OnlineElevators, myElev)
 			}
-			
 		}
 	}
-
 }
-func NewOrder(incomingMsg UtilitiesTypes.Msg, myElev *UtilitiesTypes.Elevator) bool {
+
+func ShouldITake(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator) bool {
 	shouldITake := false
 	if incomingMsg.IsNewOrder {
 		if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
@@ -177,7 +204,6 @@ func NewOrder(incomingMsg UtilitiesTypes.Msg, myElev *UtilitiesTypes.Elevator) b
 					OnlineElevators[i] = incomingMsg.Elevator
 				}
 				if incomingMsg.NewOrderTakerID == myElev.ID {
-					myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
 					shouldITake = true
 				}
 
@@ -187,6 +213,7 @@ func NewOrder(incomingMsg UtilitiesTypes.Msg, myElev *UtilitiesTypes.Elevator) b
 	return shouldITake
 }
 
+/*
 func Sync(msgChan UtilitiesTypes.MsgChan, myElev *UtilitiesTypes.Elevator) {
 	for {
 		select {
@@ -245,7 +272,7 @@ func Sync(msgChan UtilitiesTypes.MsgChan, myElev *UtilitiesTypes.Elevator) {
 	}
 }
 
-/*
+
 
 func Networkmain() {
 	// Our id can be anything. Here we pass it on the command line, using

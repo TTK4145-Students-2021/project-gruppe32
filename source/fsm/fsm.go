@@ -60,7 +60,7 @@ func OnRequestButtonPress(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType
 			fmt.Println("etter if")
 			elevio.SetDoorOpenLamp(true)
 			Requests.SetStartTime()
-			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Inactive
+			//myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Inactive
 			myElev.State = UtilitiesTypes.DOOR
 		} else {
 			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
@@ -70,7 +70,7 @@ func OnRequestButtonPress(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType
 		}
 		break
 	}
-	Requests.SetAllLights(*myElev, numFloors, numButtons)
+	Requests.SetAllCabLights(*myElev, numFloors, numButtons)
 
 }
 
@@ -81,12 +81,12 @@ func OnFloorArrival(myElev *UtilitiesTypes.Elevator, newFloor int) {
 
 	switch myElev.State {
 	case MOVING:
-		if Requests.ShouldStop(*myElev) == true {
+		if Requests.ShouldStop(*myElev) {
 			elevio.SetMotorDirection(elevio.MD_Stop)
 			elevio.SetDoorOpenLamp(true)
 			Requests.ClearAtCurrentFloor(myElev, numFloors, numButtons)
 			Requests.SetStartTime()
-			Requests.SetAllLights(*myElev, numFloors, numButtons)
+			Requests.SetAllCabLights(*myElev, numFloors, numButtons)
 			myElev.State = UtilitiesTypes.DOOR
 		}
 		break
