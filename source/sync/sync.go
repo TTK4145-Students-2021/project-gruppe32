@@ -226,6 +226,7 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 func ShouldITake(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator) bool {
 	shouldITake := false
 	if incomingMsg.IsNewOrder && !incomingMsg.IsReceived {
+		/*
 		if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
 			LastIncomingMessage.MsgID = incomingMsg.MsgID
 			LastIncomingMessage.LocalID = incomingMsg.LocalID
@@ -243,7 +244,7 @@ func ShouldITake(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator)
 					fmt.Println(OnlineElevators[i].Orders, "\n")
 
 				}
-			}
+			}*/
 
 			if incomingMsg.NewOrderTakerID == myElev.ID {
 				shouldITake = true
@@ -251,7 +252,7 @@ func ShouldITake(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator)
 			}
 		}
 
-	}
+	//}
 	//fmt.Println(OnlineElevators)
 	//fmt.Println("her kommer de på nytt")
 	return shouldITake
