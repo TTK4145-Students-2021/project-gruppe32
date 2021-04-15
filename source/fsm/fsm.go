@@ -41,7 +41,6 @@ func DoorState(myElev *UtilitiesTypes.Elevator) {
 func OnRequestButtonPress(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) {
 	switch myElev.State {
 	case DOOR:
-		fmt.Println("door")
 		if !(myElev.Floor == btnFloor) {
 			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
 		} else {
@@ -60,7 +59,7 @@ func OnRequestButtonPress(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType
 			fmt.Println("etter if")
 			elevio.SetDoorOpenLamp(true)
 			Requests.SetStartTime()
-			//myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Inactive
+			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Inactive
 			myElev.State = UtilitiesTypes.DOOR
 		} else {
 			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active

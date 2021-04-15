@@ -114,8 +114,6 @@ func SendMessage(msgChan UtilitiesTypes.MsgChan) {
 		if !(len(MsgQueue) == 0) {
 			msg := MsgQueue[0]
 			msgChan.SendChan <- msg
-			fmt.Println(msg.MsgID)
-			fmt.Println(msg)
 			if len(receivedMsg) >= numPeers {
 				MsgQueue = MsgQueue[1:]
 				receivedMsg = receivedMsg[:0]
@@ -144,10 +142,10 @@ func ConfirmationMessage(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.E
 func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan) {
 	//UpdateHallLights()
 	//fmt.Println(incomingMsg.Elevator.ID)
-	for i := 0; i < len(OnlineElevators); i++ {
+	//for i := 0; i < len(OnlineElevators); i++ {
 		//fmt.Println(OnlineElevators[i].ID)
 		//fmt.Println("---------", i)
-	}
+	//}
 	if !(incomingMsg.LocalID == myElev.ID) {
 
 		if incomingMsg.IsReceived {
@@ -163,8 +161,10 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 			//
 		} else {
 			ConfirmationMessage(incomingMsg, myElev, msgChan)
-
 		}
+	}
+	if !incomingMsg.IsReceived {
+
 		if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
 			LastIncomingMessage.MsgID = incomingMsg.MsgID
 			LastIncomingMessage.LocalID = incomingMsg.LocalID
@@ -179,7 +179,7 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 					if incomingMsg.LocalID != 0 {
 						OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
 						fmt.Println("legger til i lista")
-						//fmt.Println(OnlineElevators)
+						fmt.Println(OnlineElevators)
 						//fmt.Println(incomingMsg.LocalID)
 					}
 				}
@@ -189,6 +189,7 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 		}
 	}
 }
+
 
 func ShouldITake(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator) bool {
 	shouldITake := false
