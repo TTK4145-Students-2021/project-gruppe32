@@ -83,10 +83,8 @@ func UpdateHallLights() {
 		for f := 0; f < UtilitiesTypes.NumFloors; f++ {
 			if OnlineElevators[i].Orders[f][elevio.BT_HallUp].Status == UtilitiesTypes.Active {
 				elevio.SetButtonLamp(elevio.BT_HallUp, f, true)
-				fmt.Println("på")
 			} else {
 				elevio.SetButtonLamp(elevio.BT_HallUp, f, false)
-				fmt.Println("av")
 			}
 			if OnlineElevators[i].Orders[f][elevio.BT_HallDown].Status == UtilitiesTypes.Active {
 				elevio.SetButtonLamp(elevio.BT_HallDown, f, true)
@@ -140,7 +138,7 @@ func ConfirmationMessage(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.E
 }
 
 func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan) {
-	//UpdateHallLights()
+	UpdateHallLights()
 	//fmt.Println(incomingMsg.Elevator.ID)
 	//for i := 0; i < len(OnlineElevators); i++ {
 		//fmt.Println(OnlineElevators[i].ID)
