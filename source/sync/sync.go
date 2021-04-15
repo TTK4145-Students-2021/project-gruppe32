@@ -218,22 +218,22 @@ func ShouldITake(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator)
 			if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
 				OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
 			}
-			/*
 
-				for i := 0; i < len(OnlineElevators); i++ {
+			for i := 0; i < len(OnlineElevators); i++ {
+				fmt.Println(OnlineElevators[i].ID)
+				fmt.Println(OnlineElevators[i].Orders, "\n")
+				if OnlineElevators[i].ID == incomingMsg.Elevator.ID {
+					OnlineElevators[i] = incomingMsg.Elevator
+					fmt.Println("etter")
 					fmt.Println(OnlineElevators[i].ID)
 					fmt.Println(OnlineElevators[i].Orders, "\n")
-					if OnlineElevators[i].ID == incomingMsg.Elevator.ID {
-						OnlineElevators[i] = incomingMsg.Elevator
-						fmt.Println("etter")
-						fmt.Println(OnlineElevators[i].ID)
-						fmt.Println(OnlineElevators[i].Orders, "\n")
 
-					}*/
+				}
 
-			if incomingMsg.NewOrderTakerID == myElev.ID {
-				shouldITake = true
+				if incomingMsg.NewOrderTakerID == myElev.ID {
+					shouldITake = true
 
+				}
 			}
 
 		}
