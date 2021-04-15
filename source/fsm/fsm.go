@@ -60,7 +60,7 @@ func OnRequestButtonPress(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType
 			fmt.Println("etter if")
 			elevio.SetDoorOpenLamp(true)
 			Requests.SetStartTime()
-			//myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Inactive
+			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Inactive
 			myElev.State = UtilitiesTypes.DOOR
 		} else {
 			myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active

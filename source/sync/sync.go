@@ -73,29 +73,41 @@ func AddHallOrderToMsgQueue(myElev UtilitiesTypes.Elevator, btnFloor int, btnTyp
 	Message.IsReceived = false
 	Message.LocalID = myElev.ID
 	MsgQueue = append(MsgQueue, Message)
+	fmt.Println(Message.Elevator.Orders)
 	fmt.Println("hall order")
 	fmt.Println(bestId)
 
 }
 
 func UpdateHallLights() {
+
 	for i := 0; i < len(OnlineElevators); i++ {
 		for f := 0; f < UtilitiesTypes.NumFloors; f++ {
 			if OnlineElevators[i].Orders[f][elevio.BT_HallUp].Status == UtilitiesTypes.Active {
 				elevio.SetButtonLamp(elevio.BT_HallUp, f, true)
-				fmt.Println("på")
-			} else {
-				elevio.SetButtonLamp(elevio.BT_HallUp, f, false)
-				fmt.Println("av")
 			}
+
 			if OnlineElevators[i].Orders[f][elevio.BT_HallDown].Status == UtilitiesTypes.Active {
 				elevio.SetButtonLamp(elevio.BT_HallDown, f, true)
-
-			} else {
-				elevio.SetButtonLamp(elevio.BT_HallDown, f, false)
 			}
+
 		}
 	}
+	for f := 0; f < UtilitiesTypes.NumFloors; f++ {
+		for b := 0; b < 2; b++ {
+			number := 0
+			for i := 0; i < len(OnlineElevators); i++ {
+				if OnlineElevators[i].Orders[f][b].Status == UtilitiesTypes.Inactive {
+					number++
+				}
+			}
+			if len(OnlineElevators) == number {
+				elevio.SetButtonLamp(elevio.ButtonType(b), f, false)
+			}
+
+		}
+	}
+	time.Sleep(10 * time.Millisecond)
 
 }
 
@@ -114,8 +126,6 @@ func SendMessage(msgChan UtilitiesTypes.MsgChan) {
 		if !(len(MsgQueue) == 0) {
 			msg := MsgQueue[0]
 			msgChan.SendChan <- msg
-			fmt.Println(msg.MsgID)
-			fmt.Println(msg)
 			if len(receivedMsg) >= numPeers {
 				MsgQueue = MsgQueue[1:]
 				receivedMsg = receivedMsg[:0]
@@ -142,14 +152,13 @@ func ConfirmationMessage(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.E
 }
 
 func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan UtilitiesTypes.MsgChan) {
-	//UpdateHallLights()
+	UpdateHallLights()
 	//fmt.Println(incomingMsg.Elevator.ID)
-	for i := 0; i < len(OnlineElevators); i++ {
-		//fmt.Println(OnlineElevators[i].ID)
-		//fmt.Println("---------", i)
-	}
+	//for i := 0; i < len(OnlineElevators); i++ {
+	//fmt.Println(OnlineElevators[i].ID)
+	//fmt.Println("---------", i)
+	//}
 	if !(incomingMsg.LocalID == myElev.ID) {
-
 		if incomingMsg.IsReceived {
 			if !ListContains(receivedMsg, incomingMsg.LocalID) {
 				receivedMsg = append(receivedMsg, incomingMsg.LocalID)
@@ -165,20 +174,27 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 			ConfirmationMessage(incomingMsg, myElev, msgChan)
 
 		}
+	}
+	if !(incomingMsg.IsReceived) && !(incomingMsg.IsNewOrder) {
+
 		if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
 			LastIncomingMessage.MsgID = incomingMsg.MsgID
 			LastIncomingMessage.LocalID = incomingMsg.LocalID
 			if len(OnlineElevators) != 0 {
 				if ContainsID(OnlineElevators, incomingMsg.LocalID) {
 					for i := 0; i < len(OnlineElevators); i++ {
-						if OnlineElevators[i].ID == incomingMsg.LocalID {
+						fmt.Println(OnlineElevators[i].ID)
+						fmt.Println(OnlineElevators[i].Orders, "\n")
+						if OnlineElevators[i].ID == incomingMsg.Elevator.ID {
 							OnlineElevators[i] = incomingMsg.Elevator
+							fmt.Println("etter")
+							fmt.Println(OnlineElevators[i].ID)
+							fmt.Println(OnlineElevators[i].Orders, "\n")
 						}
 					}
 				} else if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
 					if incomingMsg.LocalID != 0 {
 						OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
-						fmt.Println("legger til i lista")
 						//fmt.Println(OnlineElevators)
 						//fmt.Println(incomingMsg.LocalID)
 					}
@@ -186,30 +202,44 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 			} else {
 				OnlineElevators = append(OnlineElevators, myElev)
 			}
+
 		}
 	}
+	//fmt.Println(OnlineElevators)
+	//fmt.Println("her kommer de på nytt")
 }
 
 func ShouldITake(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator) bool {
 	shouldITake := false
-	if incomingMsg.IsNewOrder {
+	if incomingMsg.IsNewOrder && !incomingMsg.IsReceived {
 		if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
 			LastIncomingMessage.MsgID = incomingMsg.MsgID
 			LastIncomingMessage.LocalID = incomingMsg.LocalID
 			if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
 				OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
 			}
-			for i := 0; i < len(OnlineElevators); i++ {
-				if OnlineElevators[i].ID == incomingMsg.LocalID {
-					OnlineElevators[i] = incomingMsg.Elevator
-				}
-				if incomingMsg.NewOrderTakerID == myElev.ID {
-					shouldITake = true
-				}
+			/*
+
+				for i := 0; i < len(OnlineElevators); i++ {
+					fmt.Println(OnlineElevators[i].ID)
+					fmt.Println(OnlineElevators[i].Orders, "\n")
+					if OnlineElevators[i].ID == incomingMsg.Elevator.ID {
+						OnlineElevators[i] = incomingMsg.Elevator
+						fmt.Println("etter")
+						fmt.Println(OnlineElevators[i].ID)
+						fmt.Println(OnlineElevators[i].Orders, "\n")
+
+					}*/
+
+			if incomingMsg.NewOrderTakerID == myElev.ID {
+				shouldITake = true
 
 			}
+
 		}
 	}
+	//fmt.Println(OnlineElevators)
+	//fmt.Println("her kommer de på nytt")
 	return shouldITake
 }
 

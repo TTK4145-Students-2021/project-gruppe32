@@ -90,10 +90,12 @@ func main() {
 		case incomingMsg := <-msgChan.RecChan:
 			sync.Run(incomingMsg, myElevator, msgChan)
 			if sync.ShouldITake(incomingMsg, myElevator) {
+				//fmt.Println(sync.OnlineElevators[1].Orders[1][1].Status)
+				//fmt.Println(sync.OnlineElevators[1].ID)
 				myElevator.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
-				fmt.Println(myElevator.State)
 				sync.AddElevToMsgQueue(myElevator)
 				fsm.OnRequestButtonPress(&myElevator, incomingMsg.Order.Floor, elevio.ButtonType(incomingMsg.Order.ButtonType))
+				sync.AddElevToMsgQueue(myElevator)
 			}
 
 		}
