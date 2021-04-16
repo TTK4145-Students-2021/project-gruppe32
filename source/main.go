@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"os"
-	"strconv"
+	//"strconv"
 
 	"./Network/network/bcast"
 	"./Network/network/peers"
@@ -21,29 +21,33 @@ func main() {
 	sync.LastIncomingMessage.MsgID = 0
 	sync.LastIncomingMessage.LocalID = 0
 
-	id := os.Args[1]
+	port := os.Args[1]
+	elevID := 2
+	
 
 	numFloors := 4
 	numButtons := 3
-	drv_buttons := make(chan elevio.ButtonEvent)
-	drv_floors := make(chan int)
+
+	//drv_buttons := make(chan elevio.ButtonEvent)
+	//drv_floors := make(chan int)
 	drv_obstr := make(chan bool)
 	drv_stop := make(chan bool)
 	msgChan := UtilitiesTypes.MsgChan{
 		SendChan: make(chan UtilitiesTypes.Msg),
 		RecChan:  make(chan UtilitiesTypes.Msg),
 	}
-	fsmChan:=fsm.FsmChan{
+	fsmChan:=UtilitiesTypes.FsmChan{
 		Elev: make(chan UtilitiesTypes.Elevator),
 		NewOrder: make(chan elevio.ButtonEvent),
 		ArrivedAtFloor: make(chan int),
+		NewButtonPress : make(chan elevio.ButtonEvent),
 	}
 	peerUpdateCh := make(chan peers.PeerUpdate)
 	peerTxEnable := make(chan bool)
 
-	elevio.Init(fmt.Sprintf("localhost:%s", id), numFloors)
+	elevio.Init(fmt.Sprintf("localhost:%s", port), numFloors)
 	myElevator.State = fsm.IDLE
-	myElevator.ID, _ = strconv.Atoi(id)
+	//elevId,_ := strconv.Atoi(id)
 	Requests.ClearAllLights(numFloors, numButtons)
 
 	//sync.Test()
@@ -51,19 +55,22 @@ func main() {
 
 
 
-	go elevio.PollButtons(drv_buttons)
-	go elevio.PollFloorSensor(drv_floors)
+	go elevio.PollButtons(fsmChan.NewButtonPress)
+	go elevio.PollFloorSensor(fsmChan.ArrivedAtFloor)
 	go elevio.PollObstructionSwitch(drv_obstr)
 	go elevio.PollStopButton(drv_stop)
 	go bcast.Transmitter(12569, msgChan.SendChan)
 	go bcast.Receiver(12569, msgChan.RecChan)
 	go sync.SendMessage(msgChan)
-	go peers.Transmitter(10652, id, peerTxEnable)
+	go peers.Transmitter(10652, port, peerTxEnable)
 	go peers.Receiver(10652, peerUpdateCh)
+	go sync.AddElevToMsgQueue(fsmChan)
+	//go sync.Sync(msgChan,fsmChan,elevID)
+	go sync.Run(fsmChan, msgChan)
+	go fsm.FsmElevator(fsmChan,elevID)
 
-	go fsm.FsmElevator(fsmChan,myElevator)
 
-
+	//go sync.UpdateHallLights()
 
 	go func() {
 		fmt.Println("Started")
@@ -74,10 +81,15 @@ func main() {
 				fmt.Printf("  Peers:    %q\n", p.Peers)
 				fmt.Printf("  New:      %q\n", p.New)
 				fmt.Printf("  Lost:     %q\n", p.Lost)
-
+			case newbtn := <- fsmChan.NewButtonPress:
+				fmt.Println(newbtn.Floor, newbtn.Button)
+			case elev := <- fsmChan.Elev:
+				fmt.Println(elev.ID)
 			}
+		
 		}
 	}()
+	
 
 	select{}
 	/*go fsm.DoorState(&myElevator)

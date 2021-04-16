@@ -1,11 +1,12 @@
 package fsm
 
 import (
-	
+	"fmt"
 	"time"
 	"../Requests"
 	"../UtilitiesTypes"
 	"../elevio"
+	"../sync"
 )
 
 const numFloors = 4
@@ -21,34 +22,215 @@ const (
 	DOOR         = 3
 )
 
-type FsmChan struct{
-	Elev chan UtilitiesTypes.Elevator
-	NewOrder chan elevio.ButtonEvent
-	ArrivedAtFloor chan int
-}
 
 
-func FsmElevator(ch FsmChan, myElev UtilitiesTypes.Elevator){
-	elev := myElev
 
+func FsmElevator(ch UtilitiesTypes.FsmChan, id int){
+	elev := UtilitiesTypes.Elevator{
+		State: IDLE,
+		Dir: elevio.MD_Stop,
+		Floor: elevio.GetFloor(),
+		ID: id,
+
+	}
 	doorTimeout := time.NewTimer(3*time.Second)
 	engineErrorTimeout := time.NewTimer(3*time.Second)
 	doorTimeout.Stop()
 	engineErrorTimeout.Stop()
-	ch.Elev <- elev
+	fmt.Println("inni fsm")
 
 
 	for{
 		select{
-		case newOrder := <- ch.NewOrder:
+		case newButtonPress := <- ch.NewButtonPress:
+			if newButtonPress.Button == elevio.BT_Cab {
+
+				switch elev.State{
+				case DOOR:
+					//fmt.Println("door")
+					if !(elev.Floor == newButtonPress.Floor) {
+						elev.Orders[newButtonPress.Floor][newButtonPress.Button].Status = UtilitiesTypes.Active
+					} else {
+						elevio.SetDoorOpenLamp(true)
+						doorTimeout.Reset(3*time.Second)
+					}
+					break
+			
+				case MOVING:
+					elev.Orders[newButtonPress.Floor][newButtonPress.Button].Status = UtilitiesTypes.Active
+					break
+			
+				case IDLE:
+					if elev.Floor == newButtonPress.Floor {
+						elevio.SetDoorOpenLamp(true)
+						doorTimeout.Reset(3*time.Second)
+						elev.Orders[newButtonPress.Floor][newButtonPress.Button].Status = UtilitiesTypes.Inactive
+						elev.State = DOOR
+					} else {
+						elev.Orders[newButtonPress.Floor][newButtonPress.Button].Status = UtilitiesTypes.Active
+						elev.Dir = Requests.ChooseDirection(elev)
+						elevio.SetMotorDirection(elev.Dir)
+						elev.State = MOVING
+					}
+					break
+				}
+
+				}else{
+					fmt.Println("legger til hallorder")
+					sync.AddHallOrderToMsgQueue(elev,newButtonPress.Floor,newButtonPress.Button)
+				}
+				Requests.SetAllCabLights(elev, numFloors, numButtons)
+				ch.Elev <- elev
+		
+		case incomingOrder := <- ch.NewOrder:
+
 			switch elev.State{
+			case DOOR:
+				//fmt.Println("door")
+				if !(elev.Floor == incomingOrder.Floor) {
+					elev.Orders[incomingOrder.Floor][incomingOrder.Button].Status = UtilitiesTypes.Active
+				} else {
+					elevio.SetDoorOpenLamp(true)
+					doorTimeout.Reset(3*time.Second)
+				}
+				break
+		
+			case MOVING:
+				elev.Orders[incomingOrder.Floor][incomingOrder.Button].Status = UtilitiesTypes.Active
+				break
+		
+			case IDLE:
+				if elev.Floor == incomingOrder.Floor {
+					elevio.SetDoorOpenLamp(true)
+					doorTimeout.Reset(3*time.Second)
+					elev.Orders[incomingOrder.Floor][incomingOrder.Button].Status = UtilitiesTypes.Inactive
+					elev.State = DOOR
+				} else {
+					elev.Orders[incomingOrder.Floor][incomingOrder.Button].Status = UtilitiesTypes.Active
+					elev.Dir = Requests.ChooseDirection(elev)
+					elevio.SetMotorDirection(elev.Dir)
+					elev.State = MOVING
+				}
+				break
+			}
+
+			ch.Elev <- elev
+		case elevfloor := <- ch.ArrivedAtFloor:
+			elev.Floor = elevfloor
+
+			elevio.SetFloorIndicator(elev.Floor)
+
+			switch elev.State {
+			case MOVING:
+				if Requests.ShouldStop(elev) {
+					elevio.SetMotorDirection(elevio.MD_Stop)
+					elevio.SetDoorOpenLamp(true)
+					Requests.ClearAtCurrentFloor(&elev, numFloors, numButtons)
+					doorTimeout.Reset(3*time.Second)
+					Requests.SetAllCabLights(elev, numFloors, numButtons)
+					elev.State = DOOR
+			}
+			break
+
+			default:
+			//assert("THIS SHOULD NOT BE CALLEd")
+			break
+			}
+			ch.Elev <- elev
+	case <-doorTimeout.C:
+			
+		elevio.SetDoorOpenLamp(false)
+		elev.Dir = Requests.ChooseDirection(elev)
+		if elev.Dir == elevio.MD_Stop{
+			elev.State = IDLE
+			engineErrorTimeout.Stop()
+		}else{
+			elev.State = MOVING
+			engineErrorTimeout.Reset(3*time.Second)
+			elevio.SetMotorDirection(elev.Dir)
+		}
+		ch.Elev <- elev
+			}
+		}
+
+	
+}
+
+func DoorState(ch UtilitiesTypes.FsmChan) {
+	elev := <- ch.Elev
+	ch.Elev <- elev
+	for {
+		if Requests.TimeOut(3, elev) {
+			fmt.Println("TimerOut")
+			OnDoorTimeout(elev)
+		}
+	}
+}
+func OnDoorTimeout(myElev UtilitiesTypes.Elevator) {
+	switch myElev.State {
+	case DOOR:
+		myElev.Dir = Requests.ChooseDirection(myElev)
+		elevio.SetDoorOpenLamp(false)
+		elevio.SetMotorDirection(myElev.Dir)
+
+		if myElev.Dir == elevio.MD_Stop {
+			myElev.State = UtilitiesTypes.IDLE
+		} else {
+			myElev.State = UtilitiesTypes.MOVING
+		}
+
+		break
+	default:
+		break
+	}
+}
+
+			/*
+			switch elev.State{
+
 			case IDLE:
 				elev.Dir = Requests.ChooseDirection(elev)
 				elevio.SetMotorDirection(elev.Dir)
 				if elev.Dir == elevio.MD_Stop{
 					elev.State = DOOR
 					elevio.SetDoorOpenLamp(true)
-					//timer i 3 sek
+					doorTimeout.Reset(3*time.Second)
+					
+					//endre til orderFinisihed
+					//Fjerne order fra kø
+
+				} else{
+					elev.State = MOVING
+					//sjekke for motorstopp
+				}
+			case MOVING:
+			case DOOR:
+				if elev.Floor == newButtonPress.Floor{
+					doorTimeout.Reset(3*time.Second)
+					//endre til orderFinisihed
+					//Fjerne order fra kø
+				}
+				}
+				} else {
+					sync.AddHallOrderToMsgQueue(elev, newButtonPress.Floor, newButtonPress.Button)
+				}
+			//case Undefined:
+			//default:
+			//	fmt.Println("Error")
+			//}
+			ch.Elev <- elev
+		
+		case newOrder := <- ch.NewOrder:
+			switch elev.State{
+
+			case IDLE:
+				elev.Dir = Requests.ChooseDirection(elev)
+				elevio.SetMotorDirection(elev.Dir)
+				if elev.Dir == elevio.MD_Stop{
+					elev.State = DOOR
+					elevio.SetDoorOpenLamp(true)
+					doorTimeout.Reset(3*time.Second)
+					
 					//endre til orderFinisihed
 					//Fjerne order fra kø
 
@@ -59,7 +241,7 @@ func FsmElevator(ch FsmChan, myElev UtilitiesTypes.Elevator){
 			case MOVING:
 			case DOOR:
 				if elev.Floor == newOrder.Floor{
-					//restart timer
+					doorTimeout.Reset(3*time.Second)
 					//endre til orderFinisihed
 					//Fjerne order fra kø
 				}
@@ -69,7 +251,12 @@ func FsmElevator(ch FsmChan, myElev UtilitiesTypes.Elevator){
 			//}
 			ch.Elev <- elev
 			}
+
+
+
+
 		case elevfloor := <- ch.ArrivedAtFloor:
+			
 			elev.Floor = elevfloor
 			if Requests.ShouldStop(elev){
 				//Finished = true
@@ -86,14 +273,15 @@ func FsmElevator(ch FsmChan, myElev UtilitiesTypes.Elevator){
 			ch.Elev <- elev
 
 		case <-doorTimeout.C:
+			
 				elevio.SetDoorOpenLamp(false)
 				elev.Dir = Requests.ChooseDirection(elev)
 				if elev.Dir == elevio.MD_Stop{
 					elev.State = IDLE
-					//stopp motorstopp-timer
+					engineErrorTimeout.Stop()
 				}else{
 					elev.State = MOVING
-					//restart motorstopp timer
+					engineErrorTimeout.Reset(3*time.Second)
 					elevio.SetMotorDirection(elev.Dir)
 				}
 				ch.Elev <- elev
@@ -104,10 +292,9 @@ func FsmElevator(ch FsmChan, myElev UtilitiesTypes.Elevator){
 				//print at heisen har motorstopp
 				//elevio.SetMotorDir(elev.Dir)
 				ch.Elev <- elev
-				//reset ErrorTimer
-			}
-		}
-	}
+				engineErrorTimeout.Reset(5*time.Second)
+				*/
+		
 
 
 

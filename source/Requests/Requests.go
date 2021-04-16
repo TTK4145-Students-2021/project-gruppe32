@@ -148,5 +148,7 @@ func TimeOut(seconds time.Duration, myElev UtilitiesTypes.Elevator) bool {
 
 
 func Initialize(elev UtilitiesTypes.Elevator){
-	
+
+
+
 }

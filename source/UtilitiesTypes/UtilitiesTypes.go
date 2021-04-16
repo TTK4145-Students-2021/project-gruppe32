@@ -2,6 +2,8 @@ package UtilitiesTypes
 
 import "../elevio"
 
+const NumElevs = 2
+
 const NumFloors = 4
 
 const NumButtons = 3
@@ -18,6 +20,7 @@ const (
 )
 
 type Order struct {
+	OrderTaker int
 	Floor      int
 	ButtonType int
 	Status     OrderStatus
@@ -50,7 +53,12 @@ type Msg struct {
 	MsgID           int
 	LocalID         int
 }
-
+type FsmChan struct{
+	Elev chan Elevator
+	NewOrder chan elevio.ButtonEvent
+	ArrivedAtFloor chan int
+	NewButtonPress chan elevio.ButtonEvent
+}
 type MsgChan struct {
 	SendChan chan Msg
 	RecChan  chan Msg
