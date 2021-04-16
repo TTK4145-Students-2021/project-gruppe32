@@ -33,11 +33,13 @@ func main() {
 		SendChan: make(chan UtilitiesTypes.Msg),
 		RecChan:  make(chan UtilitiesTypes.Msg),
 	}
-
-	go elevio.PollButtons(drv_buttons)
-	go elevio.PollFloorSensor(drv_floors)
-	go elevio.PollObstructionSwitch(drv_obstr)
-	go elevio.PollStopButton(drv_stop)
+	fsmChan:=fsm.FsmChan{
+		Elev: make(chan UtilitiesTypes.Elevator),
+		NewOrder: make(chan elevio.ButtonEvent),
+		ArrivedAtFloor: make(chan int),
+	}
+	peerUpdateCh := make(chan peers.PeerUpdate)
+	peerTxEnable := make(chan bool)
 
 	elevio.Init(fmt.Sprintf("localhost:%s", id), numFloors)
 	myElevator.State = fsm.IDLE
@@ -47,16 +49,21 @@ func main() {
 	//sync.Test()
 	//go sync.Sync(msgChan, &myElevator)
 
+
+
+	go elevio.PollButtons(drv_buttons)
+	go elevio.PollFloorSensor(drv_floors)
+	go elevio.PollObstructionSwitch(drv_obstr)
+	go elevio.PollStopButton(drv_stop)
 	go bcast.Transmitter(12569, msgChan.SendChan)
 	go bcast.Receiver(12569, msgChan.RecChan)
 	go sync.SendMessage(msgChan)
-
-	peerUpdateCh := make(chan peers.PeerUpdate)
-	// We can disable/enable the transmitter after it has been started.
-	// This could be used to signal that we are somehow "unavailable".
-	peerTxEnable := make(chan bool)
 	go peers.Transmitter(10652, id, peerTxEnable)
 	go peers.Receiver(10652, peerUpdateCh)
+
+	go fsm.FsmElevator(fsmChan,myElevator)
+
+
 
 	go func() {
 		fmt.Println("Started")
@@ -72,7 +79,8 @@ func main() {
 		}
 	}()
 
-	go fsm.DoorState(&myElevator)
+	select{}
+	/*go fsm.DoorState(&myElevator)
 
 	for {
 		select {
@@ -119,7 +127,7 @@ func main() {
 			}
 
 		}
-	}
+	}*/
 
 	//FsmFunction(drv_buttons, drv_floors, drv_obstr, drv_stop)
 	//var noOrder UtilitiesTypes.Order

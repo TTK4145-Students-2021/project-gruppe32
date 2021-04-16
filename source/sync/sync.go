@@ -58,7 +58,7 @@ var iter = 0
 var Message UtilitiesTypes.Msg
 
 var (
-	numPeers            = 2
+	numPeers            = 1
 	receivedMsg         []int
 	LastIncomingMessage UtilitiesTypes.Msg
 )
@@ -68,6 +68,7 @@ func AddHallOrderToMsgQueue(myElev *UtilitiesTypes.Elevator, btnFloor int, btnTy
 	bestId := OrderDistributor.CostCalculator(OnlineElevators, btnFloor, btnType)
 	if bestId == myElev.ID {
 		myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
+		AddElevToMsgQueue(*myElev)
 	}
 	order := UtilitiesTypes.Order{Floor: btnFloor, ButtonType: int(btnType), Status: UtilitiesTypes.Active, Finished: false}
 	Message.MsgID = iter
@@ -189,7 +190,8 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 
 		}
 	}
-	if !(incomingMsg.IsReceived) && !(incomingMsg.IsNewOrder) {
+	if !(incomingMsg.IsReceived) {
+	if !(incomingMsg.IsNewOrder) {
 
 		if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
 			LastIncomingMessage.MsgID = incomingMsg.MsgID
@@ -221,6 +223,7 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 	}
 	//fmt.Println(OnlineElevators)
 	//fmt.Println("her kommer de på nytt")
+}
 }
 
 func ShouldITake(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator) bool {

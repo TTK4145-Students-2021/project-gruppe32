@@ -1,8 +1,8 @@
 package fsm
 
 import (
-	"fmt"
-
+	
+	"time"
 	"../Requests"
 	"../UtilitiesTypes"
 	"../elevio"
@@ -21,8 +21,99 @@ const (
 	DOOR         = 3
 )
 
-//var state State
+type FsmChan struct{
+	Elev chan UtilitiesTypes.Elevator
+	NewOrder chan elevio.ButtonEvent
+	ArrivedAtFloor chan int
+}
 
+
+func FsmElevator(ch FsmChan, myElev UtilitiesTypes.Elevator){
+	elev := myElev
+
+	doorTimeout := time.NewTimer(3*time.Second)
+	engineErrorTimeout := time.NewTimer(3*time.Second)
+	doorTimeout.Stop()
+	engineErrorTimeout.Stop()
+	ch.Elev <- elev
+
+
+	for{
+		select{
+		case newOrder := <- ch.NewOrder:
+			switch elev.State{
+			case IDLE:
+				elev.Dir = Requests.ChooseDirection(elev)
+				elevio.SetMotorDirection(elev.Dir)
+				if elev.Dir == elevio.MD_Stop{
+					elev.State = DOOR
+					elevio.SetDoorOpenLamp(true)
+					//timer i 3 sek
+					//endre til orderFinisihed
+					//Fjerne order fra kø
+
+				} else{
+					elev.State = MOVING
+					//sjekke for motorstopp
+				}
+			case MOVING:
+			case DOOR:
+				if elev.Floor == newOrder.Floor{
+					//restart timer
+					//endre til orderFinisihed
+					//Fjerne order fra kø
+				}
+			//case Undefined:
+			//default:
+			//	fmt.Println("Error")
+			//}
+			ch.Elev <- elev
+			}
+		case elevfloor := <- ch.ArrivedAtFloor:
+			elev.Floor = elevfloor
+			if Requests.ShouldStop(elev){
+				//Finished = true
+				elevio.SetDoorOpenLamp(true)
+				//sjekk motorstopp
+				elev.State = DOOR
+				elevio.SetMotorDirection(elevio.MD_Stop)
+				// sett på dørtimer i 3 sek
+				//endre til orderFinisihed
+					//Fjerne order fra kø
+			}else if elev.State == MOVING{
+				//sjekk motorstopp
+			}
+			ch.Elev <- elev
+
+		case <-doorTimeout.C:
+				elevio.SetDoorOpenLamp(false)
+				elev.Dir = Requests.ChooseDirection(elev)
+				if elev.Dir == elevio.MD_Stop{
+					elev.State = IDLE
+					//stopp motorstopp-timer
+				}else{
+					elev.State = MOVING
+					//restart motorstopp timer
+					elevio.SetMotorDirection(elev.Dir)
+				}
+				ch.Elev <- elev
+
+			case <-engineErrorTimeout.C:
+				//elevio.SetMotorDir(STOP)
+				//Elevator.State == Undefined
+				//print at heisen har motorstopp
+				//elevio.SetMotorDir(elev.Dir)
+				ch.Elev <- elev
+				//reset ErrorTimer
+			}
+		}
+	}
+
+
+
+
+//var state State
+/*
 func OnInitBetweenFloors(myElev *UtilitiesTypes.Elevator) {
 	elevio.SetMotorDirection(elevio.MD_Down)
 	myElev.Dir = elevio.MD_Down
@@ -115,6 +206,15 @@ func OnDoorTimeout(myElev *UtilitiesTypes.Elevator) {
 		break
 	}
 }
+*/
+
+
+
+
+
+
+
+//GAMMEL UTDELT
 
 /*func FsmFunction(drv_buttons chan elevio.ButtonEvent, drv_floors chan int, drv_obstr chan bool, drv_stop chan bool){
 
