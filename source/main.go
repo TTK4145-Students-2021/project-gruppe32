@@ -73,6 +73,8 @@ func main() {
 			}
 		}
 	}()
+
+	go sync.CheckElevatorOnline((peerUpdateCh))
 	//fsm.OnInitBetweenFloors(&myElevator)
 
 	//go fsm.DoorState(&myElevator)

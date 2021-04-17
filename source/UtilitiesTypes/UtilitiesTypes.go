@@ -15,6 +15,7 @@ const (
 	IDLE         = 1
 	MOVING       = 2
 	DOOR         = 3
+	UNDEFINED = 4
 )
 
 type Order struct {
@@ -39,6 +40,8 @@ type Elevator struct {
 	Floor  int
 	State  State
 	Orders [NumFloors][NumButtons]Order
+	MotorStop bool
+	Online bool
 }
 
 type Msg struct {

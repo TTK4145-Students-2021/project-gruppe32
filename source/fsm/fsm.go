@@ -18,10 +18,11 @@ const numButtons = 3
 type State int
 
 const (
-	INIT   State = 0
-	IDLE         = 1
-	MOVING       = 2
-	DOOR         = 3
+	INIT      State = 0
+	IDLE            = 1
+	MOVING          = 2
+	DOOR            = 3
+	UNDEFINED       = 4
 )
 
 //var state State
@@ -78,6 +79,7 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 						myElev.Orders[btn.Floor][btn.Button].Status = UtilitiesTypes.Inactive
 						myElev.State = UtilitiesTypes.DOOR
 					} else {
+						engineErrorTimeout.Reset(3 * time.Second)
 						myElev.Orders[btn.Floor][btn.Button].Status = UtilitiesTypes.Active
 						myElev.Dir = Requests.ChooseDirection(*myElev)
 						elevio.SetMotorDirection(myElev.Dir)
@@ -92,26 +94,23 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 			}
 		case newFloor := <-drv_floors:
 			myElev.Floor = newFloor
+			myElev.MotorStop = false
 			engineErrorTimeout.Reset(5 * time.Second)
 
 			elevio.SetFloorIndicator(myElev.Floor)
 
-			switch myElev.State {
-			case MOVING:
-				if Requests.ShouldStop(*myElev) {
-					elevio.SetMotorDirection(elevio.MD_Stop)
-					elevio.SetDoorOpenLamp(true)
-					Requests.ClearAtCurrentFloor(myElev, numFloors, numButtons)
-					doorTimeout.Reset(3 * time.Second)
-					Requests.SetAllCabLights(*myElev, numFloors, numButtons)
-					myElev.State = UtilitiesTypes.DOOR
-				}
-				break
-
-			default:
-				//assert("THIS SHOULD NOT BE CALLEd")
-				break
+			if Requests.ShouldStop(*myElev) {
+				elevio.SetMotorDirection(elevio.MD_Stop)
+				elevio.SetDoorOpenLamp(true)
+				Requests.ClearAtCurrentFloor(myElev, numFloors, numButtons)
+				doorTimeout.Reset(3 * time.Second)
+				engineErrorTimeout.Stop()
+				Requests.SetAllCabLights(*myElev, numFloors, numButtons)
+				myElev.State = UtilitiesTypes.DOOR
+			} else if myElev.State == MOVING {
+				engineErrorTimeout.Reset(3 * time.Second)
 			}
+
 			sync.AddElevToMsgQueue(*myElev)
 
 		case incomingMsg := <-msgChan.RecChan:
@@ -147,6 +146,7 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 						myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Inactive
 						myElev.State = UtilitiesTypes.DOOR
 					} else {
+						engineErrorTimeout.Reset(3 * time.Second)
 						myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
 						myElev.Dir = Requests.ChooseDirection(*myElev)
 						elevio.SetMotorDirection(myElev.Dir)
@@ -167,11 +167,12 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 				engineErrorTimeout.Stop()
 			} else {
 				myElev.State = MOVING
-				engineErrorTimeout.Reset(3 * time.Second)
+				engineErrorTimeout.Reset(5 * time.Second)
 				elevio.SetMotorDirection(myElev.Dir)
 			}
 		case <-engineErrorTimeout.C:
 			fmt.Println("engine error")
+			myElev.MotorStop = true
 
 		}
 	}

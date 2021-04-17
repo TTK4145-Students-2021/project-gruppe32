@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	"strconv"
+
 	"../OrderDistributor"
 	"../UtilitiesTypes"
 	"../elevio"
+	"../Network/network/peers"
 )
 
 func Test() {
@@ -28,10 +31,26 @@ func Test() {
 var MsgQueue = []UtilitiesTypes.Msg{}
 var OnlineElevators = []UtilitiesTypes.Elevator{}
 
-func TestingNetworkElev() {
-	for i := 0; i < len(OnlineElevators); i++ {
-		fmt.Println(OnlineElevators[i].Orders)
+func CheckElevatorOnline(peerUpdateCh chan peers.PeerUpdate) {
+	for {
+		select {
+		case p := <-peerUpdateCh:
+			if len(OnlineElevators) != 0 {
+				for i := 0; i < len(OnlineElevators); i++ {
+					peer, _ := strconv.Atoi(p.Peers[i])
+					if OnlineElevators[i].ID == peer {
+						OnlineElevators[i].Online = true
+						fmt.Println("online")
+					} else {
+						OnlineElevators[i].Online = false
+						fmt.Println("offline")
+					}
+
+				}
+			}
+		}
 	}
+
 }
 
 func ListContains(list []int, new int) bool {
