@@ -133,16 +133,19 @@ func GetStartTime() time.Time {
 	return startTime
 }
 
-func TimeOut(seconds time.Duration, myElev UtilitiesTypes.Elevator) bool {
-	if myElev.State == UtilitiesTypes.DOOR {
-		seconds = seconds * time.Second
+
+
+
+func TimeOut(dur time.Duration, myElev UtilitiesTypes.Elevator) bool {
+	//if myElev.State == UtilitiesTypes.DOOR {
+		milliseconds := dur * time.Millisecond
 		begin := GetStartTime()
 		difference := time.Now().Sub(begin)
 
-		if difference >= seconds {
+		if difference >= milliseconds {
 			return true
 		}
-	}
+	//}
 	return false
 }
 

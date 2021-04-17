@@ -60,7 +60,7 @@ func main() {
 	go peers.Transmitter(10652, id, peerTxEnable)
 	go peers.Receiver(10652, peerUpdateCh)
 
-	go func() {
+	/*go func() {
 		fmt.Println("Started")
 		for {
 			select {
@@ -72,13 +72,13 @@ func main() {
 
 			}
 		}
-	}()
+	}()*/
 
-	go sync.CheckElevatorOnline((peerUpdateCh))
 	//fsm.OnInitBetweenFloors(&myElevator)
 
 	//go fsm.DoorState(&myElevator)
 	go fsm.FSM(msgChan, drv_buttons, drv_floors, &myElevator)
+	go sync.UpdateOnlineIds(peerUpdateCh, myElevator)
 
 	select {}
 }

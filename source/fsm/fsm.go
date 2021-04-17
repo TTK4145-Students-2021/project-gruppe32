@@ -114,7 +114,8 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 			sync.AddElevToMsgQueue(*myElev)
 
 		case incomingMsg := <-msgChan.RecChan:
-			sync.Run(incomingMsg, *myElev, msgChan)
+			//MsgTimeout := time.NewTimer(20 * time.Millisecond)
+			sync.Run(incomingMsg,*myElev, msgChan)
 			if sync.ShouldITake(incomingMsg, *myElev) {
 				//fmt.Println(sync.OnlineElevators[1].Orders[1][1].Status)
 				//fmt.Println(sync.OnlineElevators[1].ID)
