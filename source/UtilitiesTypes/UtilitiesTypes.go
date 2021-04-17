@@ -38,7 +38,7 @@ type Elevator struct {
 	Dir    elevio.MotorDirection
 	Floor  int
 	State  State
-	Orders [NumFloors][NumButtons]Order
+	Orders [UtilitiesTypes.NumFloors][UtilitiesTypes.NumButtons]Order
 }
 
 type Msg struct {

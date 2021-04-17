@@ -100,11 +100,11 @@ func main() {
 				//fmt.Println(sync.OnlineElevators[1].Orders[1][1].Status)
 				//fmt.Println(sync.OnlineElevators[1].ID)
 				if incomingMsg.LocalID != myElevator.ID {
-					for i := 0; i < len(sync.OnlineElevators); i++ {
-						if sync.OnlineElevators[i].Floor != myElevator.Floor {
-							sync.OnlineElevators[i].Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Inactive
-						}
-					}
+					//for i := 0; i < len(sync.OnlineElevators); i++ {
+					//if sync.OnlineElevators[i].Floor != myElevator.Floor {
+					//sync.OnlineElevators[i].Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Inactive
+					//}
+					//}
 					if myElevator.Floor != incomingMsg.Order.Floor {
 						myElevator.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
 					}

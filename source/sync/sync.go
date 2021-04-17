@@ -58,29 +58,32 @@ var iter = 0
 var Message UtilitiesTypes.Msg
 
 var (
-	numPeers            = 2
+	numPeers            = 1
 	receivedMsg         []int
 	LastIncomingMessage UtilitiesTypes.Msg
 )
 
 func AddHallOrderToMsgQueue(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) {
+	fmt.Println(OnlineElevators, "før costcal")
 	iter++
 	bestId := OrderDistributor.CostCalculator(OnlineElevators, btnFloor, btnType)
+	fmt.Println(OnlineElevators, "etter costcal")
 	if bestId == myElev.ID {
 		myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
+	} else {
+		order := UtilitiesTypes.Order{Floor: btnFloor, ButtonType: int(btnType), Status: UtilitiesTypes.Active, Finished: false}
+		Message.MsgID = iter
+		Message.Elevator = *myElev
+		Message.IsNewOrder = true
+		Message.Order = order
+		Message.NewOrderTakerID = bestId
+		Message.IsReceived = false
+		Message.LocalID = myElev.ID
+		MsgQueue = append(MsgQueue, Message)
+		fmt.Println(Message.Elevator.Orders)
+		fmt.Println("hall order")
+		fmt.Println(bestId)
 	}
-	order := UtilitiesTypes.Order{Floor: btnFloor, ButtonType: int(btnType), Status: UtilitiesTypes.Active, Finished: false}
-	Message.MsgID = iter
-	Message.Elevator = *myElev
-	Message.IsNewOrder = true
-	Message.Order = order
-	Message.NewOrderTakerID = bestId
-	Message.IsReceived = false
-	Message.LocalID = myElev.ID
-	MsgQueue = append(MsgQueue, Message)
-	fmt.Println(Message.Elevator.Orders)
-	fmt.Println("hall order")
-	fmt.Println(bestId)
 
 }
 
