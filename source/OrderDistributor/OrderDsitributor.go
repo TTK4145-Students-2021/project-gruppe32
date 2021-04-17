@@ -48,19 +48,20 @@ func TimeToIdle(myElev UtilitiesTypes.Elevator) int {
 
 func CostCalculator(onlineElevators []UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) int {
 
-	UtilitiesTypes.SetOrder(&onlineElevators[0], btnFloor, btnType, UtilitiesTypes.Active, false)
+	onlineElevators[0].Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
 	cost := TimeToIdle(onlineElevators[0])
 
 	bestElevator := onlineElevators[0]
 
 	for i := 1; i < len(onlineElevators); i++ {
-		UtilitiesTypes.SetOrder(&onlineElevators[i], btnFloor, btnType, UtilitiesTypes.Active, false)
+		onlineElevators[i].Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
 
 		if TimeToIdle(onlineElevators[i]) < cost {
 			cost = TimeToIdle(onlineElevators[i])
 			bestElevator = onlineElevators[i]
 		}
 	}
+	bestID := bestElevator.ID
 
-	return bestElevator.ID
+	return bestID
 }

@@ -9,7 +9,6 @@ import (
 	"../elevio"
 )
 
-/*
 func Test() {
 
 	Heis1 := UtilitiesTypes.Elevator{ID: 1, Dir: 0, Floor: 1, State: 3}
@@ -24,17 +23,16 @@ func Test() {
 	bestId := OrderDistributor.CostCalculator(OtherElevators, 1, 0)
 	fmt.Println(bestId)
 
-}*/
+}
 
 var MsgQueue = []UtilitiesTypes.Msg{}
 var OnlineElevators = []UtilitiesTypes.Elevator{}
 
-/*
 func TestingNetworkElev() {
 	for i := 0; i < len(OnlineElevators); i++ {
 		fmt.Println(OnlineElevators[i].Orders)
 	}
-}*/
+}
 
 func ListContains(list []int, new int) bool {
 	for i := 0; i < len(list); i++ {
@@ -58,32 +56,31 @@ var iter = 0
 var Message UtilitiesTypes.Msg
 
 var (
-	numPeers            = 1
+	numPeers            = 2
 	receivedMsg         []int
 	LastIncomingMessage UtilitiesTypes.Msg
 )
 
-func AddHallOrderToMsgQueue(myElev *UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) {
-	fmt.Println(OnlineElevators, "før costcal")
+func AddHallOrderToMsgQueue(myElev UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType) {
 	iter++
+	fmt.Println(OnlineElevators, "før cost")
 	bestId := OrderDistributor.CostCalculator(OnlineElevators, btnFloor, btnType)
-	fmt.Println(OnlineElevators, "etter costcal")
-	if bestId == myElev.ID {
-		myElev.Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
-	} else {
-		order := UtilitiesTypes.Order{Floor: btnFloor, ButtonType: int(btnType), Status: UtilitiesTypes.Active, Finished: false}
-		Message.MsgID = iter
-		Message.Elevator = *myElev
-		Message.IsNewOrder = true
-		Message.Order = order
-		Message.NewOrderTakerID = bestId
-		Message.IsReceived = false
-		Message.LocalID = myElev.ID
-		MsgQueue = append(MsgQueue, Message)
-		fmt.Println(Message.Elevator.Orders)
-		fmt.Println("hall order")
-		fmt.Println(bestId)
+	for i := 0; i < len(OnlineElevators); i++ {
+		OnlineElevators[i].Orders[btnFloor][btnType].Status = UtilitiesTypes.Inactive
 	}
+	fmt.Println(OnlineElevators, "etter cost")
+	order := UtilitiesTypes.Order{Floor: btnFloor, ButtonType: int(btnType), Status: UtilitiesTypes.Active, Finished: false}
+	Message.MsgID = iter
+	Message.Elevator = myElev
+	Message.IsNewOrder = true
+	Message.Order = order
+	Message.NewOrderTakerID = bestId
+	Message.IsReceived = false
+	Message.LocalID = myElev.ID
+	MsgQueue = append(MsgQueue, Message)
+	fmt.Println(Message.Elevator.Orders)
+	fmt.Println("hall order")
+	fmt.Println(bestId)
 
 }
 
@@ -117,15 +114,6 @@ func UpdateHallLights() {
 	}
 	time.Sleep(10 * time.Millisecond)
 
-}
-
-func ClearHallAtCurrentFloor(myElev UtilitiesTypes.Elevator) {
-	for btn := 0; btn < 2; btn++ {
-		for i := 0; i < len(OnlineElevators); i++ {
-			OnlineElevators[i].Orders[myElev.Floor][btn].Status = UtilitiesTypes.Inactive
-			OnlineElevators[i].Orders[myElev.Floor][btn].Finished = true
-		}
-	}
 }
 
 func AddElevToMsgQueue(myElev UtilitiesTypes.Elevator) {
@@ -200,13 +188,13 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 			if len(OnlineElevators) != 0 {
 				if ContainsID(OnlineElevators, incomingMsg.LocalID) {
 					for i := 0; i < len(OnlineElevators); i++ {
-						fmt.Println(OnlineElevators[i].ID, "Run")
-						fmt.Println(OnlineElevators[i].Orders, "\n")
+						//fmt.Println(OnlineElevators[i].ID)
+						//fmt.Println(OnlineElevators[i].Orders, "\n")
 						if OnlineElevators[i].ID == incomingMsg.Elevator.ID {
 							OnlineElevators[i] = incomingMsg.Elevator
-							fmt.Println("etter, Run")
-							fmt.Println(OnlineElevators[i].ID)
-							fmt.Println(OnlineElevators[i].Orders, "\n")
+							//fmt.Println("etter")
+							//fmt.Println(OnlineElevators[i].ID)
+							//fmt.Println(OnlineElevators[i].Orders, "\n")
 						}
 					}
 				} else if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
@@ -237,150 +225,25 @@ func ShouldITake(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator)
 			}
 
 			for i := 0; i < len(OnlineElevators); i++ {
-				fmt.Println(OnlineElevators[i].ID, "ShouldITake")
+				fmt.Println(OnlineElevators[i].ID)
 				fmt.Println(OnlineElevators[i].Orders, "\n")
 				if OnlineElevators[i].ID == incomingMsg.Elevator.ID {
 					OnlineElevators[i] = incomingMsg.Elevator
-					fmt.Println("etter ShouldITake")
+					fmt.Println("etter")
 					fmt.Println(OnlineElevators[i].ID)
 					fmt.Println(OnlineElevators[i].Orders, "\n")
 
 				}
+
+				if incomingMsg.NewOrderTakerID == myElev.ID {
+					shouldITake = true
+
+				}
 			}
 
-			if incomingMsg.NewOrderTakerID == myElev.ID {
-				shouldITake = true
-
-			}
 		}
-
 	}
 	//fmt.Println(OnlineElevators)
 	//fmt.Println("her kommer de på nytt")
 	return shouldITake
 }
-
-/*
-func Sync(msgChan UtilitiesTypes.MsgChan, myElev *UtilitiesTypes.Elevator) {
-	for {
-		select {
-		case incomingMsg := <-msgChan.RecChan:
-			if !(incomingMsg.LocalID == myElev.ID) {
-
-				if incomingMsg.IsReceived {
-					fmt.Println("Is Recived")
-					if !ListContains(receivedMsg, incomingMsg.LocalID) {
-						receivedMsg = append(receivedMsg, incomingMsg.LocalID)
-						if len(receivedMsg) >= numPeers {
-							// stoppe timer??
-
-						}
-					}
-					// hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
-					// Alle hall orders til heisen som ikke lenger er i Peers må noen andre heiser ta ordrene.
-					//
-				} else {
-					ConfirmationMessage(incomingMsg, *myElev, msgChan)
-					fmt.Println("Con Message")
-					if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
-						if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
-							OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
-						}
-						for i := 0; i < len(OnlineElevators); i++ {
-							if OnlineElevators[i].ID == incomingMsg.LocalID {
-								OnlineElevators[i] = incomingMsg.Elevator
-							}
-						}
-					}
-				}
-			}
-			if incomingMsg.IsNewOrder {
-
-				if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
-					LastIncomingMessage.MsgID = incomingMsg.MsgID
-					LastIncomingMessage.LocalID = incomingMsg.LocalID
-					if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
-						OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
-					}
-					for i := 0; i < len(OnlineElevators); i++ {
-						if OnlineElevators[i].ID == incomingMsg.LocalID {
-							OnlineElevators[i] = incomingMsg.Elevator
-							fmt.Println(OnlineElevators[i].Floor)
-						}
-						if incomingMsg.NewOrderTakerID == myElev.ID {
-							myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
-							fmt.Println(myElev.Orders)
-						}
-
-					}
-				}
-			}
-		}
-	}
-}
-
-
-
-func Networkmain() {
-	// Our id can be anything. Here we pass it on the command line, using
-	//  `go run main.go -id=our_id`
-	var id string
-	flag.StringVar(&id, "id", "", "id of this peer")
-	flag.Parse()
-
-	// ... or alternatively, we can use the local IP address.
-	// (But since we can run multiple programs on the same PC, we also append the
-	//  process ID)
-	if id == "" {
-		localIP, err := localip.LocalIP()
-		if err != nil {
-			fmt.Println(err)
-			localIP = "DISCONNECTED"
-		}
-		id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
-	}
-
-	// We make a channel for receiving updates on the id's of the peers that are
-	//  alive on the network
-	peerUpdateCh := make(chan peers.PeerUpdate)
-	// We can disable/enable the transmitter after it has been started.
-	// This could be used to signal that we are somehow "unavailable".
-	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15647, id, peerTxEnable)
-	go peers.Receiver(15647, peerUpdateCh)
-
-	// We make channels for sending and receiving our custom data types
-	helloTx := make(chan HelloMsg)
-	helloRx := make(chan HelloMsg)
-	// ... and start the transmitter/receiver pair on some port
-	// These functions can take any number of channels! It is also possible to
-	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, helloTx)
-	go bcast.Receiver(16569, helloRx)
-
-	// The example message. We just send one of these every second.
-	go func() {
-		helloMsg := HelloMsg{"Hello from " + id, 0}
-		for {
-			helloMsg.Iter++
-			helloTx <- helloMsg
-			time.Sleep(1 * time.Second)
-		}
-	}()
-
-	fmt.Println("Started")
-	for {
-		select {
-		case p := <-peerUpdateCh:
-			fmt.Printf("Peer update:\n")
-			fmt.Printf("  Peers:    %q\n", p.Peers)
-			fmt.Printf("  New:      %q\n", p.New)
-			fmt.Printf("  Lost:     %q\n", p.Lost)
-
-		case a := <-helloRx:
-			fmt.Printf("Received: %#v\n", a)
-		}
-	}
-}
-
-*/

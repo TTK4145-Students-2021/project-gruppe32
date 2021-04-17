@@ -145,3 +145,10 @@ func TimeOut(seconds time.Duration, myElev UtilitiesTypes.Elevator) bool {
 	}
 	return false
 }
+
+
+func Initialize(elev UtilitiesTypes.Elevator){
+
+
+
+}
