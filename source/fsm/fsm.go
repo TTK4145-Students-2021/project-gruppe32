@@ -49,6 +49,7 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 	doorTimeout.Stop()
 	engineErrorTimeout.Stop()
 	for {
+		sync.UpdateHallLights()
 		select {
 		case btn := <-drv_buttons:
 			if btn.Button == elevio.BT_Cab {
@@ -115,7 +116,7 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 
 		case incomingMsg := <-msgChan.RecChan:
 			//MsgTimeout := time.NewTimer(20 * time.Millisecond)
-			sync.Run(incomingMsg,*myElev, msgChan)
+			sync.Run(incomingMsg, *myElev, msgChan)
 			if sync.ShouldITake(incomingMsg, *myElev) {
 				//fmt.Println(sync.OnlineElevators[1].Orders[1][1].Status)
 				//fmt.Println(sync.OnlineElevators[1].ID)
