@@ -237,6 +237,11 @@ func SendMessage(msgChan UtilitiesTypes.MsgChan, myElev UtilitiesTypes.Elevator)
 			for i := 0; i < len(OnlineElevators); i++ {
 				if !ListContains(receivedMsg, OnlineElevators[i].ID) {
 					ReassignOrders(OnlineElevators[i], myElev)
+					for f := 0; f < UtilitiesTypes.NumFloors; f++ {
+						for btn := 0; btn < UtilitiesTypes.NumButtons-1; btn++ {
+							myElev.Orders[f][btn].Status = UtilitiesTypes.Inactive
+						}
+					}
 				}
 			}
 		}
@@ -326,11 +331,7 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 							OnlineElevators[i] = incomingMsg.Elevator
 						}
 					}
-					for i := 0; i < len(OnlineElevators); i++ {
-						if OnlineElevators[i].MotorStop {
-							ReassignOrders(OnlineElevators[i], myElev)
-						}
-					}
+
 				} else if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
 					if incomingMsg.LocalID != 0 {
 						OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)

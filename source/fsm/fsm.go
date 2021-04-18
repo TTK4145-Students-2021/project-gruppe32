@@ -43,7 +43,7 @@ func DoorState(myElev *UtilitiesTypes.Elevator) {
 	}
 }*/
 
-func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, drv_floors chan int, myElev *UtilitiesTypes.Elevator) {
+func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, drv_floors chan int, myElev *UtilitiesTypes.Elevator, peerCh chan bool) {
 	doorTimeout := time.NewTimer(3 * time.Second)
 	engineErrorTimeout := time.NewTimer(5 * time.Second)
 	doorTimeout.Stop()
@@ -96,6 +96,7 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 		case newFloor := <-drv_floors:
 			myElev.Floor = newFloor
 			myElev.MotorStop = false
+			peerCh <- true
 			engineErrorTimeout.Reset(5 * time.Second)
 
 			elevio.SetFloorIndicator(myElev.Floor)
@@ -174,7 +175,7 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 			}
 		case <-engineErrorTimeout.C:
 			fmt.Println("engine error")
-			myElev.MotorStop = true
+			peerCh <- false
 			sync.AddElevToMsgQueue(*myElev)
 
 		}

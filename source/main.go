@@ -50,16 +50,17 @@ func main() {
 
 	//sync.Test()
 	//go sync.Sync(msgChan, &myElevator)
-
-	go bcast.Transmitter(12569, msgChan.SendChan)
-	go bcast.Receiver(12569, msgChan.RecChan)
-	go sync.SendMessage(msgChan, myElevator)
-
 	peerUpdateCh := make(chan peers.PeerUpdate)
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
+
 	go peers.Transmitter(10652, id, peerTxEnable)
+
+	go bcast.Transmitter(12569, msgChan.SendChan)
+
+	go bcast.Receiver(12569, msgChan.RecChan)
+
 	go peers.Receiver(10652, peerUpdateCh)
 
 	/*go func() {
@@ -79,7 +80,8 @@ func main() {
 	//fsm.OnInitBetweenFloors(&myElevator)
 
 	//go fsm.DoorState(&myElevator)
-	go fsm.FSM(msgChan, drv_buttons, drv_floors, &myElevator)
+	go sync.SendMessage(msgChan, myElevator)
+	go fsm.FSM(msgChan, drv_buttons, drv_floors, &myElevator, peerTxEnable)
 	go sync.UpdateOnlineIds(peerUpdateCh, myElevator)
 
 	select {}
