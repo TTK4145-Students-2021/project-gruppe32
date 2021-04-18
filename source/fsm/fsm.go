@@ -175,6 +175,7 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 		case <-engineErrorTimeout.C:
 			fmt.Println("engine error")
 			myElev.MotorStop = true
+			sync.AddElevToMsgQueue(*myElev)
 
 		}
 	}

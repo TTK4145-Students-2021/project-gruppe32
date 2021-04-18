@@ -66,6 +66,16 @@ func UpdateOnlineIds(peerUpdateCh chan peers.PeerUpdate, myElev UtilitiesTypes.E
 				}
 			}
 			fmt.Println(OnlineIds)
+			if len(OnlineIds) != 0 && len(p.Lost) != 0 {
+				for i := 0; i < len(OnlineElevators); i++ {
+					for j := 0; j < len(p.Lost); j++ {
+						peerLost, _ := strconv.Atoi(p.Lost[j])
+						if OnlineElevators[i].ID == peerLost {
+							ReassignOrders(OnlineElevators[i], myElev)
+						}
+					}
+				}
+			}
 
 		}
 	}
@@ -121,6 +131,7 @@ func AddHallOrderToMsgQueue(myElev UtilitiesTypes.Elevator, btnFloor int, btnTyp
 		OnlineElevators = append(OnlineElevators, myElev)
 	}
 	weCanTakeIt := canTakeOrder()
+
 	bestId := OrderDistributor.CostCalculator(weCanTakeIt, btnFloor, btnType)
 	for i := 0; i < len(OnlineElevators); i++ {
 		OnlineElevators[i].Orders[btnFloor][btnType].Status = UtilitiesTypes.Inactive
@@ -183,7 +194,10 @@ func UpdateHallLights() {
 
 }
 
+//elevch <- myelev
+
 func AddElevToMsgQueue(myElev UtilitiesTypes.Elevator) {
+	//case myElev := <- chan
 	iter++
 	Message.MsgID = iter
 	Message.Elevator = myElev
@@ -193,40 +207,77 @@ func AddElevToMsgQueue(myElev UtilitiesTypes.Elevator) {
 	MsgQueue = append(MsgQueue, Message)
 }
 
-func SendMessage(msgChan UtilitiesTypes.MsgChan) {
+func SendMessage(msgChan UtilitiesTypes.MsgChan, myElev UtilitiesTypes.Elevator) {
 	MsgTimeOut := time.NewTimer(200 * time.Millisecond)
 	MsgTimeOut.Stop()
-	for {
-		if !(len(MsgQueue) == 0) {
-			msg := MsgQueue[0]
-			msgChan.SendChan <- msg
-			MsgTimeOut.Reset(200 * time.Millisecond)
-			if len(receivedMsg) >= numPeers {
-				MsgQueue = MsgQueue[1:]
-				receivedMsg = receivedMsg[:0]
-				MsgTimeOut.Stop()
-			} else {
-				time.Sleep(10 * time.Millisecond)
-			}
 
+	go func() {
+		for {
+
+			if !(len(MsgQueue) == 0) {
+				msg := MsgQueue[0]
+				msgChan.SendChan <- msg
+				MsgTimeOut.Reset(200 * time.Millisecond)
+				if len(receivedMsg) >= numPeers {
+					MsgQueue = MsgQueue[1:]
+					receivedMsg = receivedMsg[:0]
+					MsgTimeOut.Stop()
+				} else {
+					time.Sleep(10 * time.Millisecond)
+				}
+
+			}
+			time.Sleep(4 * time.Millisecond) // Coopratrive routine
 		}
-		time.Sleep(4 * time.Millisecond) // Coopratrive routine
+	}()
+	for {
 		select {
-		case <-MsgTimeout.C:
+		case <-MsgTimeOut.C:
 			UpdateOnlineElevators()
 			for i := 0; i < len(OnlineElevators); i++ {
 				if !ListContains(receivedMsg, OnlineElevators[i].ID) {
-					for f := 0; f < UtilitiesTypes.NumFloors; f++ {
-						for btn := 0; btn < UtilitiesTypes.NumButtons-1; btn++ {
-							if OnlineElevators[i].Orders[f][btn].Status == UtilitiesTypes.Active {
-								AddHallOrderToMsgQueue(OnlineElevators[i], f, elevio.ButtonType(btn))
-							}
+					ReassignOrders(OnlineElevators[i], myElev)
+				}
+			}
+		}
+	}
+}
+
+/*
+func CheckFaultyElev(peerChanUpdate chan peers.PeerUpdate, myElev UtilitiesTypes.Elevator) {
+	for {
+		select {
+		case p := <-peerChanUpdate:
+			if len(OnlineIds) != 0 && len(p.Lost) != 0 {
+				for i := 0; i < len(OnlineElevators); i++ {
+					for j := 0; j < len(p.Lost); j++ {
+						peerLost, _ := strconv.Atoi(p.Lost[j])
+						if OnlineElevators[i].ID == peerLost {
+							ReassignOrders(OnlineElevators[i], myElev)
 						}
 					}
 				}
 			}
 		}
 	}
+
+}*/
+
+func ReassignOrders(elev UtilitiesTypes.Elevator, myElev UtilitiesTypes.Elevator) {
+	for i := 0; i < len(OnlineElevators); i++ {
+		for f := 0; f < UtilitiesTypes.NumFloors; f++ {
+			for btn := 0; btn < UtilitiesTypes.NumButtons-1; btn++ {
+				if elev.Orders[f][btn].Status == UtilitiesTypes.Active {
+					AddHallOrderToMsgQueue(myElev, f, elevio.ButtonType(btn))
+					if OnlineElevators[i].ID == elev.ID {
+						fmt.Println("skal sette inaktiv")
+						OnlineElevators[i].Orders[f][btn].Status = UtilitiesTypes.Inactive
+					}
+				}
+			}
+		}
+	}
+
 }
 
 // hvis timeren har gått ut, og vi må regne ut kostfunksjon på nytt hvis vi ikke får bekreftelse fra heisen som skulle ta ordren
@@ -275,6 +326,11 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 							OnlineElevators[i] = incomingMsg.Elevator
 						}
 					}
+					for i := 0; i < len(OnlineElevators); i++ {
+						if OnlineElevators[i].MotorStop {
+							ReassignOrders(OnlineElevators[i], myElev)
+						}
+					}
 				} else if !ContainsID(OnlineElevators, incomingMsg.LocalID) {
 					if incomingMsg.LocalID != 0 {
 						OnlineElevators = append(OnlineElevators, incomingMsg.Elevator)
@@ -286,6 +342,7 @@ func Run(incomingMsg UtilitiesTypes.Msg, myElev UtilitiesTypes.Elevator, msgChan
 
 		}
 	}
+
 	/*
 		case <-msgTimeout.C:
 			UpdateOnlineElevators()

@@ -34,6 +34,8 @@ func main() {
 		RecChan:  make(chan UtilitiesTypes.Msg),
 	}
 
+	//myElevCh := make(chan UtilitiesTypes.Elevator)
+
 	go elevio.PollButtons(drv_buttons)
 	go elevio.PollFloorSensor(drv_floors)
 	go elevio.PollObstructionSwitch(drv_obstr)
@@ -51,7 +53,7 @@ func main() {
 
 	go bcast.Transmitter(12569, msgChan.SendChan)
 	go bcast.Receiver(12569, msgChan.RecChan)
-	go sync.SendMessage(msgChan)
+	go sync.SendMessage(msgChan, myElevator)
 
 	peerUpdateCh := make(chan peers.PeerUpdate)
 	// We can disable/enable the transmitter after it has been started.
