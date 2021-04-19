@@ -73,6 +73,23 @@ func UpdateOnlineIds(peerUpdateCh chan peers.PeerUpdate, myElev UT.Elevator) {
 					}
 				}
 			}
+			if len(AllElevators)!=0  {
+				fmt.Println(AllElevators)
+				peerNew,_ := strconv.Atoi(p.New)
+				if ContainsID(AllElevators,peerNew){
+					fmt.Println("inni i første if")
+					for i:= 0; i < len(AllElevators); i++{
+						if AllElevators[i].ID == peerNew{
+							AddElevToMsgQueue(AllElevators[i])
+							fmt.Println("sender tilbake")
+						}
+						
+					}
+					
+				}
+			}
+
+
 
 		}
 	}
@@ -231,7 +248,6 @@ func ReassignOrders(elev UT.Elevator, myElev UT.Elevator) {
 				if elev.Orders[f][btn].Status == UT.Active {
 					AddHallOrderToMsgQueue(myElev, f, eio.ButtonType(btn))
 					if AllElevators[i].ID == elev.ID {
-						fmt.Println("skal sette inaktiv")
 						AllElevators[i].Orders[f][btn].Status = UT.Inactive
 					}
 				}
@@ -251,14 +267,14 @@ func ConfirmationMessage(incomingMsg UT.Msg, myElev UT.Elevator, msgChan UT.MsgC
 	time.Sleep(2 * time.Millisecond)
 }
 
-func Run(incomingMsg UT.Msg, myElev UT.Elevator, msgChan UT.MsgChan) {
+func Run(incomingMsg UT.Msg, myElev *UT.Elevator, msgChan UT.MsgChan) {
 	if !(incomingMsg.LocalID == myElev.ID) {
 		if incomingMsg.IsReceived {
 			if !ListContains(receivedMsg, incomingMsg.LocalID) {
 				receivedMsg = append(receivedMsg, incomingMsg.LocalID)
 			}
 		} else {
-			ConfirmationMessage(incomingMsg, myElev, msgChan)
+			ConfirmationMessage(incomingMsg, *myElev, msgChan)
 			}
 	}
 	if !(incomingMsg.IsReceived) && !(incomingMsg.IsNewOrder) {
@@ -273,17 +289,30 @@ func Run(incomingMsg UT.Msg, myElev UT.Elevator, msgChan UT.MsgChan) {
 						}
 					}
 
-				} else if !ContainsID(AllElevators, incomingMsg.LocalID) {
-					if incomingMsg.LocalID != 0 {
-						AllElevators = append(AllElevators, incomingMsg.Elevator)
+				}else if !ContainsID(AllElevators, incomingMsg.LocalID) {
+					AllElevators = append(AllElevators, incomingMsg.Elevator) 
+			} 
+				
+			}else {
+				//AllElevators = append(AllElevators, myElev)
+			}
+			if !ContainsID(AllElevators, incomingMsg.LocalID) {
+				AllElevators = append(AllElevators, incomingMsg.Elevator)
+				fmt.Println(AllElevators)
+				for i := 0; i < len(AllElevators); i++{
+					if AllElevators[i].ID == myElev.ID {
+						for f:= 0; f< NumButtons; f++{
+							if AllElevators[i].Orders[f][eio.BT_Cab].Status == UT.Active{
+								myElev.Orders[f][eio.BT_Cab].Status = UT.Active
+							}
+							
+						}
 					}
 				}
-			} else {
-				AllElevators = append(AllElevators, myElev)
-			}
 
 		}
 	}
+}
 }
 
 func ShouldITake(incomingMsg UT.Msg, myElev UT.Elevator) bool {

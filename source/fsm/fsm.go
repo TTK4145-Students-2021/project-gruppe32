@@ -28,9 +28,11 @@ const (
 
 
 func OnInitBetweenFloors(myElev *UT.Elevator) {
+	myElev.Floor = -1
 	eio.SetMotorDirection(eio.MD_Down)
 	myElev.Dir = eio.MD_Down
 	myElev.State = UT.MOVING
+	
 }
 
 /*
@@ -122,8 +124,9 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 			}
 
 		case incomingMsg := <-msgChan.RecChan:
-			sync.Run(incomingMsg, *myElev, msgChan)
+			sync.Run(incomingMsg, myElev, msgChan)
 			if sync.ShouldITake(incomingMsg, *myElev) {
+				Req.SetAllCabLights(*myElev, NumFloors, NumButtons)
 				myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UT.Active
 				sync.AddElevToMsgQueue(*myElev)
 				

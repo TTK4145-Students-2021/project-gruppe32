@@ -45,7 +45,6 @@ func main() {
 	myElevator.ID, _ = strconv.Atoi(id)
 	Req.ClearAllLights(NumFloors, NumButtons)
 	eio.SetDoorOpenLamp(false)
-	fmt.Println("satt init", myElevator.State)
 
 	//go sync.Sync(msgChan, &myElevator)
 	
@@ -57,9 +56,8 @@ func main() {
 	go bcast.Receiver(12569, msgChan.RecChan)
 	go peers.Receiver(10652, peerUpdateCh)
 
-	//fsm.OnInitBetweenFloors(&myElevator)
+	fsm.OnInitBetweenFloors(&myElevator)
 
-	//go fsm.DoorState(&myElevator)
 	go sync.SendMessage(msgChan, myElevator)
 	go fsm.FSM(msgChan, drv_buttons, drv_floors, &myElevator, peerTxEnable, drv_obstr)
 	go sync.UpdateOnlineIds(peerUpdateCh, myElevator)
