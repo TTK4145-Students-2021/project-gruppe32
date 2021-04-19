@@ -2,8 +2,7 @@ package UtilitiesTypes
 
 import "../elevio"
 
-const NumFloors = 4
-
+const NumFloors  = 4
 const NumButtons = 3
 
 var myElevator Elevator
@@ -15,7 +14,7 @@ const (
 	IDLE         = 1
 	MOVING       = 2
 	DOOR         = 3
-	UNDEFINED = 4
+	UNDEFINED    = 4
 )
 
 type Order struct {

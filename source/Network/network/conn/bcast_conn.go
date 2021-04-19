@@ -11,7 +11,7 @@ import (
 
 
 
-
+/*
 //Ny linux 
 func DialBroadcastUDP(port int) net.PacketConn {
 	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
@@ -29,8 +29,8 @@ func DialBroadcastUDP(port int) net.PacketConn {
 	f.Close()
 
 	return conn
-}
-/*
+}*/
+
 //For mac 
 func DialBroadcastUDP(port int) net.PacketConn {
 	s, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
@@ -52,7 +52,6 @@ func DialBroadcastUDP(port int) net.PacketConn {
 	return conn
 }
 
-*/
 
 
 

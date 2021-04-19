@@ -5,15 +5,16 @@ import (
 
 	"time"
 
-	"../Requests"
-	"../UtilitiesTypes"
-	"../elevio"
+	Req"../Requests"
+	UT"../UtilitiesTypes"
+	eio"../elevio"
 	"../sync"
 )
-
-const numFloors = 4
-
-const numButtons = 3
+const(
+	NumFloors = UT.NumFloors
+	NumButtons = UT.NumButtons
+)
+ 
 
 type State int
 
@@ -25,25 +26,24 @@ const (
 	UNDEFINED       = 4
 )
 
-//var state State
 
-func OnInitBetweenFloors(myElev *UtilitiesTypes.Elevator) {
-	elevio.SetMotorDirection(elevio.MD_Down)
-	myElev.Dir = elevio.MD_Down
-	myElev.State = UtilitiesTypes.MOVING
+func OnInitBetweenFloors(myElev *UT.Elevator) {
+	eio.SetMotorDirection(eio.MD_Down)
+	myElev.Dir = eio.MD_Down
+	myElev.State = UT.MOVING
 }
 
 /*
-func DoorState(myElev *UtilitiesTypes.Elevator) {
+func DoorState(myElev *UT.Elevator) {
 	for {
-		if Requests.TimeOut(3, *myElev) {
+		if Req.TimeOut(3, *myElev) {
 			fmt.Println("TimerOut")
 			OnDoorTimeout(myElev)
 		}
 	}
 }*/
 
-func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, drv_floors chan int, myElev *UtilitiesTypes.Elevator, peerCh chan bool) {
+func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan int, myElev *UT.Elevator, peerCh chan bool) {
 	doorTimeout := time.NewTimer(3 * time.Second)
 	engineErrorTimeout := time.NewTimer(5 * time.Second)
 	doorTimeout.Stop()
@@ -52,43 +52,39 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 		sync.UpdateHallLights()
 		select {
 		case btn := <-drv_buttons:
-			if btn.Button == elevio.BT_Cab {
-				fmt.Println("ny cab", myElev.State)
+			if btn.Button == eio.BT_Cab {
 				switch myElev.State {
 				case DOOR:
-					fmt.Println("door")
 					if !(myElev.Floor == btn.Floor) {
-						myElev.Orders[btn.Floor][btn.Button].Status = UtilitiesTypes.Active
+						myElev.Orders[btn.Floor][btn.Button].Status = UT.Active
 					} else {
 						engineErrorTimeout.Reset(5 * time.Second)
-						myElev.Orders[btn.Floor][btn.Button].Status = UtilitiesTypes.Inactive
-						elevio.SetDoorOpenLamp(true)
+						myElev.Orders[btn.Floor][btn.Button].Status = UT.Inactive
+						eio.SetDoorOpenLamp(true)
 						doorTimeout.Reset(3 * time.Second)
 					}
 					break
 
 				case MOVING:
-					myElev.Orders[btn.Floor][btn.Button].Status = UtilitiesTypes.Active
+					myElev.Orders[btn.Floor][btn.Button].Status = UT.Active
 					break
 
 				case IDLE:
-					fmt.Println("før if")
 					if myElev.Floor == btn.Floor {
-						fmt.Println("etter if")
-						elevio.SetDoorOpenLamp(true)
+						eio.SetDoorOpenLamp(true)
 						doorTimeout.Reset(3 * time.Second)
-						myElev.Orders[btn.Floor][btn.Button].Status = UtilitiesTypes.Inactive
-						myElev.State = UtilitiesTypes.DOOR
+						myElev.Orders[btn.Floor][btn.Button].Status = UT.Inactive
+						myElev.State = UT.DOOR
 					} else {
 						engineErrorTimeout.Reset(3 * time.Second)
-						myElev.Orders[btn.Floor][btn.Button].Status = UtilitiesTypes.Active
-						myElev.Dir = Requests.ChooseDirection(*myElev)
-						elevio.SetMotorDirection(myElev.Dir)
-						myElev.State = UtilitiesTypes.MOVING
+						myElev.Orders[btn.Floor][btn.Button].Status = UT.Active
+						myElev.Dir = Req.ChooseDirection(*myElev)
+						eio.SetMotorDirection(myElev.Dir)
+						myElev.State = UT.MOVING
 					}
 					break
 				}
-				Requests.SetAllCabLights(*myElev, numFloors, numButtons)
+				Req.SetAllCabLights(*myElev, NumFloors, NumButtons)
 				sync.AddElevToMsgQueue(*myElev)
 			} else {
 				sync.AddHallOrderToMsgQueue(*myElev, btn.Floor, btn.Button)
@@ -99,16 +95,16 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 			peerCh <- true
 			engineErrorTimeout.Reset(5 * time.Second)
 
-			elevio.SetFloorIndicator(myElev.Floor)
+			eio.SetFloorIndicator(myElev.Floor)
 
-			if Requests.ShouldStop(*myElev) {
-				elevio.SetMotorDirection(elevio.MD_Stop)
-				elevio.SetDoorOpenLamp(true)
-				Requests.ClearAtCurrentFloor(myElev, numFloors, numButtons)
+			if Req.ShouldStop(*myElev) {
+				eio.SetMotorDirection(eio.MD_Stop)
+				eio.SetDoorOpenLamp(true)
+				Req.ClearAtCurrentFloor(myElev, NumFloors, NumButtons)
 				doorTimeout.Reset(3 * time.Second)
 				engineErrorTimeout.Stop()
-				Requests.SetAllCabLights(*myElev, numFloors, numButtons)
-				myElev.State = UtilitiesTypes.DOOR
+				Req.SetAllCabLights(*myElev, NumFloors, NumButtons)
+				myElev.State = UT.DOOR
 			} else if myElev.State == MOVING {
 				engineErrorTimeout.Reset(3 * time.Second)
 			}
@@ -116,62 +112,58 @@ func FSM(msgChan UtilitiesTypes.MsgChan, drv_buttons chan elevio.ButtonEvent, dr
 			sync.AddElevToMsgQueue(*myElev)
 
 		case incomingMsg := <-msgChan.RecChan:
-			//MsgTimeout := time.NewTimer(20 * time.Millisecond)
 			sync.Run(incomingMsg, *myElev, msgChan)
 			if sync.ShouldITake(incomingMsg, *myElev) {
-				//fmt.Println(sync.OnlineElevators[1].Orders[1][1].Status)
-				//fmt.Println(sync.OnlineElevators[1].ID)
-				myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
+				myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UT.Active
 				sync.AddElevToMsgQueue(*myElev)
+				
 				switch myElev.State {
+
 				case DOOR:
-					fmt.Println("door")
 					if !(myElev.Floor == incomingMsg.Order.Floor) {
-						myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
+						myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UT.Active
 					} else {
 						engineErrorTimeout.Reset(5 * time.Second)
-						myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Inactive
-						elevio.SetDoorOpenLamp(true)
+						myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UT.Inactive
+						eio.SetDoorOpenLamp(true)
 						doorTimeout.Reset(3 * time.Second)
 					}
 					break
 
 				case MOVING:
-					myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
+					myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UT.Active
 					break
 
 				case IDLE:
-					fmt.Println("før if")
 					if myElev.Floor == incomingMsg.Order.Floor {
-						fmt.Println("etter if")
-						elevio.SetDoorOpenLamp(true)
+						eio.SetDoorOpenLamp(true)
 						doorTimeout.Reset(3 * time.Second)
-						myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Inactive
-						myElev.State = UtilitiesTypes.DOOR
+						myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UT.Inactive
+						myElev.State = UT.DOOR
 					} else {
 						engineErrorTimeout.Reset(3 * time.Second)
-						myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UtilitiesTypes.Active
-						myElev.Dir = Requests.ChooseDirection(*myElev)
-						elevio.SetMotorDirection(myElev.Dir)
-						myElev.State = UtilitiesTypes.MOVING
+						myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UT.Active
+						myElev.Dir = Req.ChooseDirection(*myElev)
+						eio.SetMotorDirection(myElev.Dir)
+						myElev.State = UT.MOVING
 					}
 					break
 				}
-				Requests.SetAllCabLights(*myElev, numFloors, numButtons)
+				Req.SetAllCabLights(*myElev, NumFloors, NumButtons)
 				sync.AddElevToMsgQueue(*myElev)
 			}
 
 		case <-doorTimeout.C:
 
-			elevio.SetDoorOpenLamp(false)
-			myElev.Dir = Requests.ChooseDirection(*myElev)
-			if myElev.Dir == elevio.MD_Stop {
+			eio.SetDoorOpenLamp(false)
+			myElev.Dir = Req.ChooseDirection(*myElev)
+			if myElev.Dir == eio.MD_Stop {
 				myElev.State = IDLE
 				engineErrorTimeout.Stop()
 			} else {
 				myElev.State = MOVING
 				engineErrorTimeout.Reset(5 * time.Second)
-				elevio.SetMotorDirection(myElev.Dir)
+				eio.SetMotorDirection(myElev.Dir)
 			}
 		case <-engineErrorTimeout.C:
 			fmt.Println("engine error")

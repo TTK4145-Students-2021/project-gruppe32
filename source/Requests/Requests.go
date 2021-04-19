@@ -1,48 +1,47 @@
 package Requests
 
 import (
-	"time"
 
-	"../UtilitiesTypes"
-	"../elevio"
+	UT"../UtilitiesTypes"
+	eio"../elevio"
+)
+const (
+	NumFloors  = UT.NumFloors
+	NumButtons = UT.NumButtons
 )
 
-const numFloors = 4
-
-const numButtons = 3
-
-func UpdateLights(button chan elevio.ButtonEvent) {
+func UpdateLights(button chan eio.ButtonEvent) {
 	for {
 		select {
 		case a := <-button:
-			elevio.SetButtonLamp(a.Button, a.Floor, true)
+			eio.SetButtonLamp(a.Button, a.Floor, true)
 		}
 	}
 }
 
-func SetAllCabLights(elev UtilitiesTypes.Elevator, numFloors int, numButtons int) {
-	for floor := 0; floor < numFloors; floor++ {
-		active := elev.Orders[floor][elevio.BT_Cab].Status == UtilitiesTypes.Active
-		elevio.SetButtonLamp(elevio.ButtonType(elevio.BT_Cab), floor, active)
+func SetAllCabLights(elev UT.Elevator, NumFloors int, NumButtons int) {
+	for floor := 0; floor < NumFloors; floor++ {
+		active := elev.Orders[floor][eio.BT_Cab].Status == UT.Active
+		eio.SetButtonLamp(eio.ButtonType(eio.BT_Cab), floor, active)
 	}
 }
 
-func ClearAllLights(numFloors int, numButtons int) {
-	for floor := 0; floor < numFloors; floor++ {
-		for btn := 0; btn < numButtons; btn++ {
-			elevio.SetButtonLamp(elevio.ButtonType(btn), floor, false)
+func ClearAllLights(NumFloors int, NumButtons int) {
+	for floor := 0; floor < NumFloors; floor++ {
+		for btn := 0; btn < NumButtons; btn++ {
+			eio.SetButtonLamp(eio.ButtonType(btn), floor, false)
 		}
 	}
-	for floor := 0; floor < numFloors; floor++ {
-		elevio.SetFloorIndicator(floor)
+	for floor := 0; floor < NumFloors; floor++ {
+		eio.SetFloorIndicator(floor)
 	}
-	elevio.SetDoorOpenLamp(false)
+	eio.SetDoorOpenLamp(false)
 }
 
-func RequestAbove(elev UtilitiesTypes.Elevator, numFloors int, numButtons int) bool {
-	for f := elev.Floor + 1; f < numFloors; f++ {
-		for b := 0; b < numButtons; b++ {
-			if elev.Orders[f][b].Status == UtilitiesTypes.Active {
+func RequestAbove(elev UT.Elevator, NumFloors int, NumButtons int) bool {
+	for f := elev.Floor + 1; f < NumFloors; f++ {
+		for b := 0; b < NumButtons; b++ {
+			if elev.Orders[f][b].Status == UT.Active {
 				return true
 			}
 		}
@@ -51,10 +50,10 @@ func RequestAbove(elev UtilitiesTypes.Elevator, numFloors int, numButtons int) b
 	return false
 }
 
-func RequestBelow(elev UtilitiesTypes.Elevator, numFloors int, numButtons int) bool {
+func RequestBelow(elev UT.Elevator, NumFloors int, NumButtons int) bool {
 	for f := 0; f < elev.Floor; f++ {
-		for b := 0; b < numButtons; b++ {
-			if elev.Orders[f][b].Status == UtilitiesTypes.Active {
+		for b := 0; b < NumButtons; b++ {
+			if elev.Orders[f][b].Status == UT.Active {
 				return true
 			}
 		}
@@ -63,22 +62,22 @@ func RequestBelow(elev UtilitiesTypes.Elevator, numFloors int, numButtons int) b
 	return false
 }
 
-func ShouldStop(elev UtilitiesTypes.Elevator) bool {
+func ShouldStop(elev UT.Elevator) bool {
 	switch elev.Dir {
-	case elevio.MD_Down:
-		if elev.Orders[elev.Floor][elevio.BT_HallDown].Status == UtilitiesTypes.Active {
+	case eio.MD_Down:
+		if elev.Orders[elev.Floor][eio.BT_HallDown].Status == UT.Active {
 			return true
-		} else if elev.Orders[elev.Floor][elevio.BT_Cab].Status == UtilitiesTypes.Active {
+		} else if elev.Orders[elev.Floor][eio.BT_Cab].Status == UT.Active {
 			return true
-		} else if !RequestBelow(elev, numFloors, numButtons) {
+		} else if !RequestBelow(elev, NumFloors, NumButtons) {
 			return true
 		}
-	case elevio.MD_Up:
-		if elev.Orders[elev.Floor][elevio.BT_HallUp].Status == UtilitiesTypes.Active {
+	case eio.MD_Up:
+		if elev.Orders[elev.Floor][eio.BT_HallUp].Status == UT.Active {
 			return true
-		} else if elev.Orders[elev.Floor][elevio.BT_Cab].Status == UtilitiesTypes.Active {
+		} else if elev.Orders[elev.Floor][eio.BT_Cab].Status == UT.Active {
 			return true
-		} else if !RequestAbove(elev, numFloors, numButtons) {
+		} else if !RequestAbove(elev, NumFloors, NumButtons) {
 			return true
 		}
 	default:
@@ -88,70 +87,41 @@ func ShouldStop(elev UtilitiesTypes.Elevator) bool {
 	return false
 }
 
-func ChooseDirection(elev UtilitiesTypes.Elevator) elevio.MotorDirection {
+func ChooseDirection(elev UT.Elevator) eio.MotorDirection {
 	switch elev.Dir {
-	case elevio.MD_Up:
-		if RequestAbove(elev, numFloors, numButtons) {
-			return elevio.MD_Up
-		} else if RequestBelow(elev, numFloors, numButtons) {
-			return elevio.MD_Down
+	case eio.MD_Up:
+		if RequestAbove(elev, NumFloors, NumButtons) {
+			return eio.MD_Up
+		} else if RequestBelow(elev, NumFloors, NumButtons) {
+			return eio.MD_Down
 		}
-		return elevio.MD_Stop
-	case elevio.MD_Down:
-		if RequestBelow(elev, numFloors, numButtons) {
-			return elevio.MD_Down
-		} else if RequestAbove(elev, numFloors, numButtons) {
-			return elevio.MD_Up
+		return eio.MD_Stop
+	case eio.MD_Down:
+		if RequestBelow(elev, NumFloors, NumButtons) {
+			return eio.MD_Down
+		} else if RequestAbove(elev, NumFloors, NumButtons) {
+			return eio.MD_Up
 		}
-		return elevio.MD_Stop
-	case elevio.MD_Stop:
-		if RequestBelow(elev, numFloors, numButtons) {
-			return elevio.MD_Down
-		} else if RequestAbove(elev, numFloors, numButtons) {
-			return elevio.MD_Up
+		return eio.MD_Stop
+	case eio.MD_Stop:
+		if RequestBelow(elev, NumFloors, NumButtons) {
+			return eio.MD_Down
+		} else if RequestAbove(elev, NumFloors, NumButtons) {
+			return eio.MD_Up
 		}
-		return elevio.MD_Stop
+		return eio.MD_Stop
 	default:
-		return elevio.MD_Stop
+		return eio.MD_Stop
 	}
 }
 
-func ClearAtCurrentFloor(elev *UtilitiesTypes.Elevator, numFloors int, numButtons int) {
-	for btn := 0; btn < numButtons; btn++ {
-		elev.Orders[elev.Floor][btn].Status = UtilitiesTypes.Inactive
+func ClearAtCurrentFloor(elev *UT.Elevator, NumFloors int, NumButtons int) {
+	for btn := 0; btn < NumButtons; btn++ {
+		elev.Orders[elev.Floor][btn].Status = UT.Inactive
 		elev.Orders[elev.Floor][btn].Finished = true
 	}
 }
 
-var startTime time.Time
-
-func SetStartTime() {
-	startTime = time.Now()
-}
-
-func GetStartTime() time.Time {
-	return startTime
-}
-
-
-
-
-func TimeOut(dur time.Duration, myElev UtilitiesTypes.Elevator) bool {
-	//if myElev.State == UtilitiesTypes.DOOR {
-		milliseconds := dur * time.Millisecond
-		begin := GetStartTime()
-		difference := time.Now().Sub(begin)
-
-		if difference >= milliseconds {
-			return true
-		}
-	//}
-	return false
-}
-
-
-func Initialize(elev UtilitiesTypes.Elevator){
-
-
+func Initialize(elev UT.Elevator){
 
 }
