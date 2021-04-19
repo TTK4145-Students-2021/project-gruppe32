@@ -7,26 +7,25 @@ import (
 	"strconv"
 
 	"../Network/network/peers"
-	OD"../OrderDistributor"
-	UT"../UtilitiesTypes"
-	eio"../elevio"
+	OD "../OrderDistributor"
+	UT "../UtilitiesTypes"
+	eio "../elevio"
 )
 
-var MsgQueue     = []UT.Msg{}
+var MsgQueue = []UT.Msg{}
 var AllElevators = []UT.Elevator{}
-var OnlineIds    = []int{}
-var iter         = 0
+var OnlineIds = []int{}
+var iter = 0
 var Message UT.Msg
 
 var (
-	numPeers     = len(OnlineIds) - 1
 	receivedMsg         []int
 	LastIncomingMessage UT.Msg
 )
 
 const (
-	NumFloors    = UT.NumFloors
-	NumButtons   = UT.NumButtons
+	NumFloors  = UT.NumFloors
+	NumButtons = UT.NumButtons
 )
 
 func UpdateOnlineIds(peerUpdateCh chan peers.PeerUpdate, myElev UT.Elevator) {
@@ -73,23 +72,21 @@ func UpdateOnlineIds(peerUpdateCh chan peers.PeerUpdate, myElev UT.Elevator) {
 					}
 				}
 			}
-			if len(AllElevators)!=0  {
+			if len(AllElevators) != 0 {
 				fmt.Println(AllElevators)
-				peerNew,_ := strconv.Atoi(p.New)
-				if ContainsID(AllElevators,peerNew){
+				peerNew, _ := strconv.Atoi(p.New)
+				if ContainsID(AllElevators, peerNew) {
 					fmt.Println("inni i første if")
-					for i:= 0; i < len(AllElevators); i++{
-						if AllElevators[i].ID == peerNew{
+					for i := 0; i < len(AllElevators); i++ {
+						if AllElevators[i].ID == peerNew {
 							AddElevToMsgQueue(AllElevators[i])
 							fmt.Println("sender tilbake")
 						}
-						
+
 					}
-					
+
 				}
 			}
-
-
 
 		}
 	}
@@ -188,8 +185,6 @@ func UpdateHallLights() {
 	time.Sleep(10 * time.Millisecond)
 }
 
-
-
 func AddElevToMsgQueue(myElev UT.Elevator) {
 	iter++
 	Message.MsgID = iter
@@ -204,24 +199,23 @@ func SendMessage(msgChan UT.MsgChan, myElev UT.Elevator) {
 	MsgTimeOut := time.NewTimer(200 * time.Millisecond)
 	MsgTimeOut.Stop()
 
-	go func() {
-		for {
-			if !(len(MsgQueue) == 0) {
-				msg := MsgQueue[0]
-				msgChan.SendChan <- msg
-				MsgTimeOut.Reset(200 * time.Millisecond)
-				if len(receivedMsg) >= numPeers {
-					MsgQueue = MsgQueue[1:]
-					receivedMsg = receivedMsg[:0]
-					MsgTimeOut.Stop()
-				} else {
-					time.Sleep(10 * time.Millisecond)
-				}
-
+	for {
+		if !(len(MsgQueue) == 0) {
+			msg := MsgQueue[0]
+			msgChan.SendChan <- msg
+			MsgTimeOut.Reset(200 * time.Millisecond)
+			if len(receivedMsg) >= (len(OnlineIds) - 1) {
+				MsgQueue = MsgQueue[1:]
+				receivedMsg = receivedMsg[:0]
+				MsgTimeOut.Stop()
+			} else {
+				time.Sleep(10 * time.Millisecond)
 			}
-			time.Sleep(4 * time.Millisecond) // Coopratrive routine
+
 		}
-	}()
+		time.Sleep(4 * time.Millisecond) // Coopratrive routine
+	}
+
 	for {
 		select {
 		case <-MsgTimeOut.C:
@@ -239,7 +233,6 @@ func SendMessage(msgChan UT.MsgChan, myElev UT.Elevator) {
 		}
 	}
 }
-
 
 func ReassignOrders(elev UT.Elevator, myElev UT.Elevator) {
 	for i := 0; i < len(AllElevators); i++ {
@@ -275,7 +268,7 @@ func Run(incomingMsg UT.Msg, myElev *UT.Elevator, msgChan UT.MsgChan) {
 			}
 		} else {
 			ConfirmationMessage(incomingMsg, *myElev, msgChan)
-			}
+		}
 	}
 	if !(incomingMsg.IsReceived) && !(incomingMsg.IsNewOrder) {
 		if !(LastIncomingMessage.MsgID == incomingMsg.MsgID && LastIncomingMessage.LocalID == incomingMsg.LocalID) {
@@ -289,30 +282,30 @@ func Run(incomingMsg UT.Msg, myElev *UT.Elevator, msgChan UT.MsgChan) {
 						}
 					}
 
-				}else if !ContainsID(AllElevators, incomingMsg.LocalID) {
-					AllElevators = append(AllElevators, incomingMsg.Elevator) 
-			} 
-				
-			}else {
+				} else if !ContainsID(AllElevators, incomingMsg.LocalID) {
+					AllElevators = append(AllElevators, incomingMsg.Elevator)
+				}
+
+			} else {
 				//AllElevators = append(AllElevators, myElev)
 			}
 			if !ContainsID(AllElevators, incomingMsg.LocalID) {
 				AllElevators = append(AllElevators, incomingMsg.Elevator)
 				fmt.Println(AllElevators)
-				for i := 0; i < len(AllElevators); i++{
+				for i := 0; i < len(AllElevators); i++ {
 					if AllElevators[i].ID == myElev.ID {
-						for f:= 0; f< NumButtons; f++{
-							if AllElevators[i].Orders[f][eio.BT_Cab].Status == UT.Active{
+						for f := 0; f < NumFloors; f++ {
+							if AllElevators[i].Orders[f][eio.BT_Cab].Status == UT.Active {
 								myElev.Orders[f][eio.BT_Cab].Status = UT.Active
 							}
-							
+
 						}
 					}
 				}
 
+			}
 		}
 	}
-}
 }
 
 func ShouldITake(incomingMsg UT.Msg, myElev UT.Elevator) bool {
