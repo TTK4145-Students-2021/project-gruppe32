@@ -43,7 +43,7 @@ func DoorState(myElev *UT.Elevator) {
 	}
 }*/
 
-func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan int, myElev *UT.Elevator, peerCh chan bool) {
+func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan int, myElev *UT.Elevator, peerCh chan bool, drv_obstr chan bool) {
 	doorTimeout := time.NewTimer(3 * time.Second)
 	engineErrorTimeout := time.NewTimer(5 * time.Second)
 	doorTimeout.Stop()
@@ -111,6 +111,16 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 
 			sync.AddElevToMsgQueue(*myElev)
 
+		case obstruction := <-drv_obstr:
+			if obstruction && myElev.State==DOOR {
+				doorTimeout.Stop()
+				engineErrorTimeout.Reset(3 * time.Second)	
+			}else if !obstruction && myElev.State==DOOR{
+				engineErrorTimeout.Stop()
+				doorTimeout.Reset(3* time.Second)
+
+			}
+
 		case incomingMsg := <-msgChan.RecChan:
 			sync.Run(incomingMsg, *myElev, msgChan)
 			if sync.ShouldITake(incomingMsg, *myElev) {
@@ -169,8 +179,16 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 			fmt.Println("engine error")
 			peerCh <- false
 			sync.AddElevToMsgQueue(*myElev)
+			time.Sleep(1*time.Second)
+			for f:=0; f<NumFloors;f++{
+				for btn:=0; btn<NumButtons-1;btn++{
+					myElev.Orders[f][btn].Status = UT.Inactive
+				}
+			}
+		}
+
 
 		}
 	}
 
-}
+

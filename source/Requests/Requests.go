@@ -65,26 +65,15 @@ func RequestBelow(elev UT.Elevator, NumFloors int, NumButtons int) bool {
 func ShouldStop(elev UT.Elevator) bool {
 	switch elev.Dir {
 	case eio.MD_Down:
-		if elev.Orders[elev.Floor][eio.BT_HallDown].Status == UT.Active {
-			return true
-		} else if elev.Orders[elev.Floor][eio.BT_Cab].Status == UT.Active {
-			return true
-		} else if !RequestBelow(elev, NumFloors, NumButtons) {
-			return true
-		}
+		return elev.Orders[elev.Floor][eio.BT_HallDown].Status == UT.Active || elev.Orders[elev.Floor][eio.BT_Cab].Status == UT.Active || !RequestBelow(elev, NumFloors, NumButtons) 
 	case eio.MD_Up:
-		if elev.Orders[elev.Floor][eio.BT_HallUp].Status == UT.Active {
-			return true
-		} else if elev.Orders[elev.Floor][eio.BT_Cab].Status == UT.Active {
-			return true
-		} else if !RequestAbove(elev, NumFloors, NumButtons) {
-			return true
-		}
+		return elev.Orders[elev.Floor][eio.BT_HallUp].Status == UT.Active || elev.Orders[elev.Floor][eio.BT_Cab].Status == UT.Active || !RequestAbove(elev, NumFloors, NumButtons) 
+	case eio.MD_Stop:
 	default:
 		return true
 
 	}
-	return false
+	return true
 }
 
 func ChooseDirection(elev UT.Elevator) eio.MotorDirection {

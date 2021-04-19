@@ -61,7 +61,7 @@ func main() {
 
 	//go fsm.DoorState(&myElevator)
 	go sync.SendMessage(msgChan, myElevator)
-	go fsm.FSM(msgChan, drv_buttons, drv_floors, &myElevator, peerTxEnable)
+	go fsm.FSM(msgChan, drv_buttons, drv_floors, &myElevator, peerTxEnable, drv_obstr)
 	go sync.UpdateOnlineIds(peerUpdateCh, myElevator)
 
 	select {}
