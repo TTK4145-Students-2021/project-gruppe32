@@ -111,6 +111,8 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 			}
 
 			sync.AddElevToMsgQueue(*myElev)
+			//La inn set cab lights fiksa problem med lys når treminated
+			Req.SetAllCabLights(*myElev, NumFloors, NumButtons)
 
 		case obstruction := <-drv_obstr:
 			if obstruction && myElev.State == DOOR {
