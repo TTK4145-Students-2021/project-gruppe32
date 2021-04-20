@@ -78,11 +78,13 @@ func UpdateOnlineIds(peerUpdateCh chan peers.PeerUpdate, myElev UT.Elevator) {
 				if ContainsID(AllElevators, peerNew) {
 					fmt.Println("inni i første if")
 					for i := 0; i < len(AllElevators); i++ {
-						if AllElevators[i].ID == peerNew {
-							AddElevToMsgQueue(AllElevators[i])
-							fmt.Println("sender tilbake")
-						}
+						for f := 0; f < NumFloors; f++ {
+							if (AllElevators[i].ID == peerNew) && (AllElevators[i].Orders[f][eio.BT_Cab].Status == UT.Active) {
+								AddElevToMsgQueue(AllElevators[i])
+								fmt.Println("sender tilbake") //Kun ved hall orders
+							}
 
+						}
 					}
 
 				}
@@ -128,6 +130,7 @@ func AddHallOrderToMsgQueue(myElev UT.Elevator, btnFloor int, btnType eio.Button
 	if len(AllElevators) == 0 {
 		AllElevators = append(AllElevators, myElev)
 	}
+
 	weCanTakeIt := canTakeOrder()
 
 	bestId := OD.CostCalculator(weCanTakeIt, btnFloor, btnType)

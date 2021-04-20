@@ -53,13 +53,17 @@ func CostCalculator(onlineElevators []UtilitiesTypes.Elevator, btnFloor int, btn
 
 	bestElevator := onlineElevators[0]
 
-	for i := 1; i < len(onlineElevators); i++ {
-		onlineElevators[i].Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
+	if len(onlineElevators) > 0 {
 
-		if TimeToIdle(onlineElevators[i]) < cost {
-			cost = TimeToIdle(onlineElevators[i])
-			bestElevator = onlineElevators[i]
+		for i := 0; i < len(onlineElevators); i++ {
+			onlineElevators[i].Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
+
+			if TimeToIdle(onlineElevators[i]) < cost {
+				cost = TimeToIdle(onlineElevators[i])
+				bestElevator = onlineElevators[i]
+			}
 		}
+
 	}
 	bestID := bestElevator.ID
 
