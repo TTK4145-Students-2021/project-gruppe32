@@ -133,7 +133,7 @@ func AddHallOrderToMsgQueue(myElev UT.Elevator, btnFloor int, btnType eio.Button
 
 	weCanTakeIt := canTakeOrder()
 
-	bestId := OD.CostCalculator(weCanTakeIt, btnFloor, btnType)
+	bestId := OD.CostCalculator(weCanTakeIt, btnFloor, btnType, myElev)
 	for i := 0; i < len(AllElevators); i++ {
 		AllElevators[i].Orders[btnFloor][btnType].Status = UT.Inactive
 	}

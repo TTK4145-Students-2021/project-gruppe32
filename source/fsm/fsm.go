@@ -107,6 +107,8 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 
 			if Req.ShouldStop(*myElev) {
 				eio.SetMotorDirection(eio.MD_Stop)
+				//lagt inn linja under
+				myElev.Dir = eio.MD_Up
 				eio.SetDoorOpenLamp(true)
 				Req.ClearAtCurrentFloor(myElev, NumFloors, NumButtons)
 				doorTimeout.Reset(3 * time.Second)
