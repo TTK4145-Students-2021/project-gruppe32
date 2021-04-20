@@ -190,7 +190,7 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 				}
 			}
 			//la inn for å teste å sende oftere
-			sync.AddElevToMsgQueue(*myElev)
+			//sync.AddElevToMsgQueue(*myElev)
 		}
 
 	}
