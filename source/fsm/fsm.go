@@ -5,16 +5,16 @@ import (
 
 	"time"
 
-	Req"../Requests"
-	UT"../UtilitiesTypes"
-	eio"../elevio"
+	Req "../Requests"
+	UT "../UtilitiesTypes"
+	eio "../elevio"
 	"../sync"
 )
-const(
-	NumFloors = UT.NumFloors
+
+const (
+	NumFloors  = UT.NumFloors
 	NumButtons = UT.NumButtons
 )
- 
 
 type State int
 
@@ -26,13 +26,12 @@ const (
 	UNDEFINED       = 4
 )
 
-
 func OnInitBetweenFloors(myElev *UT.Elevator) {
 	myElev.Floor = -1
 	eio.SetMotorDirection(eio.MD_Down)
 	myElev.Dir = eio.MD_Down
 	myElev.State = UT.MOVING
-	
+
 }
 
 /*
@@ -114,12 +113,12 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 			sync.AddElevToMsgQueue(*myElev)
 
 		case obstruction := <-drv_obstr:
-			if obstruction && myElev.State==DOOR {
+			if obstruction && myElev.State == DOOR {
 				doorTimeout.Stop()
-				engineErrorTimeout.Reset(3 * time.Second)	
-			}else if !obstruction && myElev.State==DOOR{
+				engineErrorTimeout.Reset(3 * time.Second)
+			} else if !obstruction && myElev.State == DOOR {
 				engineErrorTimeout.Stop()
-				doorTimeout.Reset(3* time.Second)
+				doorTimeout.Reset(3 * time.Second)
 
 			}
 
@@ -129,7 +128,7 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 				Req.SetAllCabLights(*myElev, NumFloors, NumButtons)
 				myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UT.Active
 				sync.AddElevToMsgQueue(*myElev)
-				
+
 				switch myElev.State {
 
 				case DOOR:
@@ -182,16 +181,15 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 			fmt.Println("engine error")
 			peerCh <- false
 			sync.AddElevToMsgQueue(*myElev)
-			time.Sleep(1*time.Second)
-			for f:=0; f<NumFloors;f++{
-				for btn:=0; btn<NumButtons-1;btn++{
+			time.Sleep(1 * time.Second)
+			for f := 0; f < NumFloors; f++ {
+				for btn := 0; btn < NumButtons-1; btn++ {
 					myElev.Orders[f][btn].Status = UT.Inactive
 				}
 			}
+			//la inn for å teste å sende oftere
+			sync.AddElevToMsgQueue(*myElev)
 		}
 
-
-		}
 	}
-
-
+}
