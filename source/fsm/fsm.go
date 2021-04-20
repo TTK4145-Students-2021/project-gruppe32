@@ -27,7 +27,6 @@ const (
 )
 
 func OnInitBetweenFloors(myElev *UT.Elevator) {
-	myElev.Floor = -1
 	eio.SetMotorDirection(eio.MD_Down)
 	myElev.Dir = eio.MD_Down
 	myElev.State = UT.MOVING
@@ -45,6 +44,13 @@ func DoorState(myElev *UT.Elevator) {
 }*/
 
 func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan int, myElev *UT.Elevator, peerCh chan bool, drv_obstr chan bool) {
+	for eio.GetFloor() == -1 {
+		eio.SetMotorDirection(eio.MD_Down)
+		myElev.Dir = eio.MD_Down
+		myElev.State = UT.MOVING
+
+	}
+
 	doorTimeout := time.NewTimer(3 * time.Second)
 	engineErrorTimeout := time.NewTimer(5 * time.Second)
 	doorTimeout.Stop()
@@ -92,6 +98,7 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 			}
 		case newFloor := <-drv_floors:
 			myElev.Floor = newFloor
+			fmt.Println(myElev.Floor)
 			myElev.MotorStop = false
 			peerCh <- true
 			engineErrorTimeout.Reset(5 * time.Second)
@@ -183,6 +190,7 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 			fmt.Println("engine error")
 			peerCh <- false
 			sync.AddElevToMsgQueue(*myElev)
+			fmt.Println(myElev)
 			time.Sleep(1 * time.Second)
 			for f := 0; f < NumFloors; f++ {
 				for btn := 0; btn < NumButtons-1; btn++ {
