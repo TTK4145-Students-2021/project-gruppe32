@@ -12,7 +12,7 @@ Our solution
 -------------
 We wrote our software in Go, and we decided to use "peer-to-peer" and UDP broadcasting. All elevators know each others state, orders, direction and floor. The elevator that polls the buttonpress for hall orders, calculates which elevator that should take the order using our cost function that is based on the elevator's 'time to idle'. All messages are broadcasted to all elevators that are on the network. The messages are stored in a message queue, such that one message is sent at a time. Before an elevator can move to the next message in the message queue, it has to receive a confirmation message from the other elevators that are in 'peers'. We only wait for confirmation messages from the elevators that are online, i.e. a subset of peers. When an elevator receives a new message, it updates its own copies of the other elevators, or checks if it has received new hall orders. If an elevator loses network connection, or is for other reasons unable to execute hall orders, the other elevators would take the orders. 
 
-For our code, we used the Golang libraries Net. and Time., and we used the delivered go-files Driver.go and Network.go. 
+For our code, we used the Golang libraries Net. and Time., and we used the delivered go-files Driver.go and Network.go. Our cost function uses the TimeToIdle() from the project resources. 
 
 The project was challenging, but also a lot of fun. We had no experience with Go when we started, and we have spent many hours on the Sanntidslab. 
 
