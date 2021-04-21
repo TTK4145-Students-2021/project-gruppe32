@@ -1,5 +1,5 @@
-Elevator Project - Group 32
-===========================
+Elevator Project
+================
 
 
 Summary
