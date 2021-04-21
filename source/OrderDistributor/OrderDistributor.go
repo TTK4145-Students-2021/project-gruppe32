@@ -1,45 +1,47 @@
 package OrderDistributor
 
 import (
-	"../Requests"
-	"../UtilitiesTypes"
-	"../elevio"
+	Req "../Requests"
+	UT "../UtilitiesTypes"
+	eio "../ElevIO"
 )
 
 var TRAVEL_TIME = 2500
 var DOOR_OPEN_TIME = 3000
 
-const numFloors = 4
-const numButtons = 3
+const (
+	NumButtons = UT.NumButtons
+	NumFloors  = UT.NumFloors
+)
 
-func TimeToIdle(myElev UtilitiesTypes.Elevator) int {
+func TimeToIdle(myElev UT.Elevator) int {
 	duration := 0
 
 	switch myElev.State {
-	case UtilitiesTypes.IDLE:
-		myElev.Dir = Requests.ChooseDirection(myElev)
-		if myElev.Dir == elevio.MD_Stop {
+	case UT.IDLE:
+		myElev.Dir = Req.ChooseDirection(myElev)
+		if myElev.Dir == eio.MD_Stop {
 			return duration
 		}
 		break
 
-	case UtilitiesTypes.MOVING:
+	case UT.MOVING:
 		duration += TRAVEL_TIME / 2
 		if !(myElev.Floor == 0 && myElev.Dir == -1) {
 			myElev.Floor += int(myElev.Dir)
 		}
 		break
 
-	case UtilitiesTypes.DOOR:
+	case UT.DOOR:
 		duration -= DOOR_OPEN_TIME / 2
 	}
 
 	for {
-		if Requests.ShouldStop(myElev) {
-			Requests.ClearAtCurrentFloor(&myElev, numFloors, numButtons)
+		if Req.ShouldStop(myElev) {
+			Req.ClearAtCurrentFloor(&myElev, NumFloors, NumButtons)
 			duration += DOOR_OPEN_TIME
-			myElev.Dir = Requests.ChooseDirection(myElev)
-			if myElev.Dir == elevio.MD_Stop {
+			myElev.Dir = Req.ChooseDirection(myElev)
+			if myElev.Dir == eio.MD_Stop {
 				return duration
 			}
 		}
@@ -50,15 +52,15 @@ func TimeToIdle(myElev UtilitiesTypes.Elevator) int {
 	}
 }
 
-func CostCalculator(onlineElevators []UtilitiesTypes.Elevator, btnFloor int, btnType elevio.ButtonType, myElev UtilitiesTypes.Elevator) int {
-	if elevio.GetFloor() == -1 {
+func CostCalculator(onlineElevators []UT.Elevator, btnFloor int, btnType eio.ButtonType, myElev UT.Elevator) int {
+	if eio.GetFloor() == -1 {
 		for j := 0; j < len(onlineElevators); j++ {
 			if myElev.ID == onlineElevators[j].ID {
 				onlineElevators = append(onlineElevators[:j], onlineElevators[j+1:]...)
 			}
 		}
 	}
-	onlineElevators[0].Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
+	onlineElevators[0].Orders[btnFloor][btnType].Status = UT.Active
 	cost := TimeToIdle(onlineElevators[0])
 
 	bestElevator := onlineElevators[0]
@@ -66,7 +68,7 @@ func CostCalculator(onlineElevators []UtilitiesTypes.Elevator, btnFloor int, btn
 	if len(onlineElevators) > 0 {
 
 		for i := 0; i < len(onlineElevators); i++ {
-			onlineElevators[i].Orders[btnFloor][btnType].Status = UtilitiesTypes.Active
+			onlineElevators[i].Orders[btnFloor][btnType].Status = UT.Active
 
 			if TimeToIdle(onlineElevators[i]) < cost {
 				cost = TimeToIdle(onlineElevators[i])

@@ -1,14 +1,13 @@
-package fsm
+package FSM
 
 import (
 	"fmt"
-
 	"time"
 
+	eio "../ElevIO"
 	Req "../Requests"
+	"../Sync"
 	UT "../UtilitiesTypes"
-	eio "../elevio"
-	"../sync"
 )
 
 const (
@@ -19,36 +18,17 @@ const (
 type State int
 
 const (
-	INIT      State = 0
-	IDLE            = 1
-	MOVING          = 2
-	DOOR            = 3
-	UNDEFINED       = 4
+	IDLE   = 1
+	MOVING = 2
+	DOOR   = 3
 )
-
-func OnInitBetweenFloors(myElev *UT.Elevator) {
-	eio.SetMotorDirection(eio.MD_Down)
-	myElev.Dir = eio.MD_Down
-	myElev.State = UT.MOVING
-
-}
-
-/*
-func DoorState(myElev *UT.Elevator) {
-	for {
-		if Req.TimeOut(3, *myElev) {
-			fmt.Println("TimerOut")
-			OnDoorTimeout(myElev)
-		}
-	}
-}*/
 
 func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan int, myElev *UT.Elevator, peerCh chan bool, drv_obstr chan bool) {
 	for eio.GetFloor() == -1 {
 		eio.SetMotorDirection(eio.MD_Down)
 		myElev.Dir = eio.MD_Down
 		myElev.State = UT.MOVING
-
+		time.Sleep(4 * time.Millisecond)
 	}
 
 	doorTimeout := time.NewTimer(3 * time.Second)
@@ -56,7 +36,7 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 	doorTimeout.Stop()
 	engineErrorTimeout.Stop()
 	for {
-		sync.UpdateHallLights()
+		Sync.UpdateHallLights()
 		select {
 		case btn := <-drv_buttons:
 			if btn.Button == eio.BT_Cab {
@@ -70,11 +50,9 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 						eio.SetDoorOpenLamp(true)
 						doorTimeout.Reset(3 * time.Second)
 					}
-					break
 
 				case MOVING:
 					myElev.Orders[btn.Floor][btn.Button].Status = UT.Active
-					break
 
 				case IDLE:
 					if myElev.Floor == btn.Floor {
@@ -89,16 +67,14 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 						eio.SetMotorDirection(myElev.Dir)
 						myElev.State = UT.MOVING
 					}
-					break
 				}
 				Req.SetAllCabLights(*myElev, NumFloors, NumButtons)
-				sync.AddElevToMsgQueue(*myElev)
+				Sync.AddElevToMsgQueue(*myElev)
 			} else {
-				sync.AddHallOrderToMsgQueue(*myElev, btn.Floor, btn.Button)
+				Sync.AddHallOrderToMsgQueue(*myElev, btn.Floor, btn.Button)
 			}
 		case newFloor := <-drv_floors:
 			myElev.Floor = newFloor
-			fmt.Println(myElev.Floor)
 			myElev.MotorStop = false
 			peerCh <- true
 			engineErrorTimeout.Reset(5 * time.Second)
@@ -107,7 +83,6 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 
 			if Req.ShouldStop(*myElev) {
 				eio.SetMotorDirection(eio.MD_Stop)
-				//lagt inn linja under
 				myElev.Dir = eio.MD_Stop
 				eio.SetDoorOpenLamp(true)
 				Req.ClearAtCurrentFloor(myElev, NumFloors, NumButtons)
@@ -119,8 +94,7 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 				engineErrorTimeout.Reset(3 * time.Second)
 			}
 
-			sync.AddElevToMsgQueue(*myElev)
-			//La inn set cab lights fiksa problem med lys når treminated
+			Sync.AddElevToMsgQueue(*myElev)
 			Req.SetAllCabLights(*myElev, NumFloors, NumButtons)
 
 		case obstruction := <-drv_obstr:
@@ -134,11 +108,11 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 			}
 
 		case incomingMsg := <-msgChan.RecChan:
-			sync.Run(incomingMsg, myElev, msgChan)
-			if sync.ShouldITake(incomingMsg, *myElev) {
+			Sync.HandleIncomingMessages(incomingMsg, myElev, msgChan)
+			if Sync.HandleNewOrder(incomingMsg, *myElev) {
 				Req.SetAllCabLights(*myElev, NumFloors, NumButtons)
 				myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UT.Active
-				sync.AddElevToMsgQueue(*myElev)
+				Sync.AddElevToMsgQueue(*myElev)
 
 				switch myElev.State {
 
@@ -151,11 +125,9 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 						eio.SetDoorOpenLamp(true)
 						doorTimeout.Reset(3 * time.Second)
 					}
-					break
 
 				case MOVING:
 					myElev.Orders[incomingMsg.Order.Floor][incomingMsg.Order.ButtonType].Status = UT.Active
-					break
 
 				case IDLE:
 					if myElev.Floor == incomingMsg.Order.Floor {
@@ -170,10 +142,9 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 						eio.SetMotorDirection(myElev.Dir)
 						myElev.State = UT.MOVING
 					}
-					break
 				}
 				Req.SetAllCabLights(*myElev, NumFloors, NumButtons)
-				sync.AddElevToMsgQueue(*myElev)
+				Sync.AddElevToMsgQueue(*myElev)
 			}
 
 		case <-doorTimeout.C:
@@ -191,16 +162,14 @@ func FSM(msgChan UT.MsgChan, drv_buttons chan eio.ButtonEvent, drv_floors chan i
 		case <-engineErrorTimeout.C:
 			fmt.Println("engine error")
 			peerCh <- false
-			sync.AddElevToMsgQueue(*myElev)
-			fmt.Println(myElev)
+			Sync.AddElevToMsgQueue(*myElev)
 			time.Sleep(1 * time.Second)
 			for f := 0; f < NumFloors; f++ {
 				for btn := 0; btn < NumButtons-1; btn++ {
 					myElev.Orders[f][btn].Status = UT.Inactive
 				}
 			}
-			//la inn for å teste å sende oftere
-			sync.AddElevToMsgQueue(*myElev)
+			Sync.AddElevToMsgQueue(*myElev)
 		}
 
 	}

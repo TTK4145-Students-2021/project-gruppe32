@@ -1,4 +1,4 @@
-package elevio
+package ElevIO
 
 import (
 	"fmt"

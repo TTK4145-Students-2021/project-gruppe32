@@ -5,30 +5,30 @@ import (
 	"os"
 	"strconv"
 
+	eio "./ElevIO"
+	"./FSM"
 	"./Network/network/bcast"
 	"./Network/network/peers"
-	Req"./Requests"
-	UT"./UtilitiesTypes"
-	eio"./elevio"
-	"./fsm"
-	"./sync"
+	Req "./Requests"
+	"./Sync"
+	UT "./UtilitiesTypes"
 )
 
 var myElevator UT.Elevator
 
 func main() {
-	sync.LastIncomingMessage.MsgID = 0
-	sync.LastIncomingMessage.LocalID = 0
+	Sync.LastIncomingMessage.MsgID = 0
+	Sync.LastIncomingMessage.LocalID = 0
 
 	id := os.Args[1]
 
-	const NumFloors  = UT.NumFloors
+	const NumFloors = UT.NumFloors
 	const NumButtons = UT.NumButtons
 
 	drv_buttons := make(chan eio.ButtonEvent)
-	drv_floors  := make(chan int)
-	drv_obstr   := make(chan bool)
-	drv_stop    := make(chan bool) 
+	drv_floors := make(chan int)
+	drv_obstr := make(chan bool)
+	drv_stop := make(chan bool)
 
 	msgChan := UT.MsgChan{
 		SendChan: make(chan UT.Msg),
@@ -41,13 +41,11 @@ func main() {
 	go eio.PollStopButton(drv_stop)
 
 	eio.Init(fmt.Sprintf("localhost:%s", id), NumFloors)
-	myElevator.State = fsm.IDLE
+	myElevator.State = FSM.IDLE
 	myElevator.ID, _ = strconv.Atoi(id)
 	Req.ClearAllLights(NumFloors, NumButtons)
 	eio.SetDoorOpenLamp(false)
 
-	//go sync.Sync(msgChan, &myElevator)
-	
 	peerUpdateCh := make(chan peers.PeerUpdate)
 	peerTxEnable := make(chan bool)
 
@@ -56,11 +54,9 @@ func main() {
 	go bcast.Receiver(12569, msgChan.RecChan)
 	go peers.Receiver(10652, peerUpdateCh)
 
-	fsm.OnInitBetweenFloors(&myElevator)
-
-	go sync.SendMessage(msgChan, myElevator)
-	go fsm.FSM(msgChan, drv_buttons, drv_floors, &myElevator, peerTxEnable, drv_obstr)
-	go sync.UpdateOnlineIds(peerUpdateCh, myElevator)
+	go Sync.SendMessage(msgChan, myElevator)
+	go FSM.FSM(msgChan, drv_buttons, drv_floors, &myElevator, peerTxEnable, drv_obstr)
+	go Sync.UpdateFromPeers(peerUpdateCh, myElevator)
 
 	select {}
 }
